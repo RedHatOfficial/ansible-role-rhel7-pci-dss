@@ -41,7 +41,7 @@ Example Playbook
 
     - hosts: servers
       roles:
-         - { role: username.rolename }
+         - { role: Ansible-Security-Compliance.rhel7-role-pci-dss }
 
 License
 -------
