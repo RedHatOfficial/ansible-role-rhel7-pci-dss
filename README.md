@@ -39,6 +39,10 @@ N/A
 Example Playbook
 ----------------
 
+Run `ansible-galaxy install Ansible-Security-Compliance.rhel7-role-pci-dss` to
+download and install the role. Then you can use the following playbook snippet.
+
+
     - hosts: servers
       roles:
          - { role: Ansible-Security-Compliance.rhel7-role-pci-dss }
