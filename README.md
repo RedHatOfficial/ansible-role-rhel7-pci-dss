@@ -1,13 +1,13 @@
-PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7
+[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7
 =========
 
 Ansible remediation role for profile pci-dss  
-Profile Title:  PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7  
+Profile Title:  [DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7  
 Profile Description:  
-This is a *draft* profile for PCI-DSS v3.  
+Ensures PCI-DSS v3 related security configuration settings \n \ are applied.  
   
 Benchmark ID:  RHEL-7  
-Benchmark Version:  0.1.38  
+Benchmark Version:  0.1.39  
   
 XCCDF Version:  1.1  
   
