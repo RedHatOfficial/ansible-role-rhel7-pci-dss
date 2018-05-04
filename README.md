@@ -1,8 +1,8 @@
-'[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7'
+"[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7"
 =========
 
 Ansible remediation role for profile pci-dss  
-Profile Title:  '[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7'  
+Profile Title:  "[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7"  
 Profile Description:  
 Ensures PCI-DSS v3 related security configuration settings \n \ are applied.  
   
