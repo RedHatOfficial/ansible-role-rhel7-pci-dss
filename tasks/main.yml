@@ -518,10 +518,18 @@
     - CJIS-5.5.2.2
     with_items:
     - '{{ files_found.files }}'
+# using this awkward syntax of deleting then adding max_log_file
+# because repeated runs created extra instances of the setting
+# interestingly this was not ocurring with max_log_file_action
+# where the variable is a text string
 -   lineinfile:
-        dest: /etc/audit/auditd.conf
-        line: max_log_file {{ var_auditd_max_log_file }}
+        path: /etc/audit/auditd.conf
+        state: absent
+        regexp: '^max_log_file *'
+-   lineinfile:
+        path: /etc/audit/auditd.conf
         state: present
+        line: 'max_log_file = {{ var_auditd_max_log_file }}'
     name: Configure auditd Max Log File Size
     tags:
     - auditd_data_retention_max_log_file
@@ -577,9 +585,10 @@
     - CJIS-5.4.1.1
     - DISA-STIG-RHEL-07-030340
 -   lineinfile:
-        dest: /etc/audit/auditd.conf
-        line: max_log_file_action {{ var_auditd_max_log_file_action }}
+        path: /etc/audit/auditd.conf
         state: present
+        regexp: '^max_log_file_action *'
+        line: 'max_log_file_action = {{ var_auditd_max_log_file_action }}'
     name: Configure auditd max_log_file_action Upon Reaching Maximum Log Size
     tags:
     - auditd_data_retention_max_log_file_action
