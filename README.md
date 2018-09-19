@@ -6,9 +6,9 @@
 [![GitHub release](https://img.shields.io/github/release/RedHatOfficial/ansible-rhel7-pci-dss-role.svg)](https://github.com/RedHatOfficial/ansible-rhel7-pci-dss-role/releases/latest)
 
 Ansible remediation role for profile pci-dss  
-Profile Title:  "[DRAFT] PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7"  
+Profile Title:  PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7
 Profile Description:  
-Ensures PCI-DSS v3 related security configuration settings \n \ are applied.  
+Ensures PCI-DSS v3 related security configuration settings are applied.  
   
 Benchmark ID:  RHEL-7  
 

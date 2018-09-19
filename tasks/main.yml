@@ -1,324 +1,632 @@
+-   name: Security patches are up to date
+    package:
+        name: '*'
+        state: latest
+    tags:
+    - security_patches_up_to_date
+    - high_severity
+    - patch_strategy
+    - low_complexity
+    - high_disruption
+    - CCE-26895-3
+    - NIST-800-53-SI-2
+    - NIST-800-53-SI-2(c)
+    - NIST-800-53-MA-1(b)
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-020260
+-   check_mode: false
+    name: Read permission of GPG key directory
+    register: gpg_key_directory_permission
+    stat:
+        path: /etc/pki/rpm-gpg/
+    tags:
+    - ensure_redhat_gpgkey_installed
+    - high_severity
+    - restrict_strategy
+    - medium_complexity
+    - medium_disruption
+    - CCE-26957-1
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+-   changed_when: false
+    check_mode: false
+    name: Read signatures in GPG key
+    register: gpg_fingerprints
+    shell: gpg --with-fingerprint '/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release' | grep 'Key fingerprint =' | tr -s ' ' | sed
+        's;.*= ;;g'
+    tags:
+    - ensure_redhat_gpgkey_installed
+    - high_severity
+    - restrict_strategy
+    - medium_complexity
+    - medium_disruption
+    - CCE-26957-1
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+-   name: Set Fact - Valid fingerprints
+    set_fact:
+        gpg_valid_fingerprints: ("567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51" "43A6 E49C 4A38 F4BE 9ABF 2A53 4568 9C88
+            2FA6 58E0")
+    tags:
+    - ensure_redhat_gpgkey_installed
+    - high_severity
+    - restrict_strategy
+    - medium_complexity
+    - medium_disruption
+    - CCE-26957-1
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+-   name: Import RedHat GPG key
+    rpm_key:
+        key: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+        state: present
+    tags:
+    - ensure_redhat_gpgkey_installed
+    - high_severity
+    - restrict_strategy
+    - medium_complexity
+    - medium_disruption
+    - CCE-26957-1
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+    when: (gpg_key_directory_permission.stat.mode <= '0755') and (( gpg_fingerprints.stdout_lines | difference(gpg_valid_fingerprints))
+        | length == 0) and (gpg_fingerprints.stdout_lines | length > 0) and (ansible_distribution == "RedHat")
+-   find:
+        paths: /etc/yum.repos.d/
+        patterns: '*.repo'
+    name: Find All Yum Repositories
+    register: yum_find
 -   lineinfile:
         create: true
-        dest: /etc/ssh/sshd_config
-        line: ClientAliveInterval {{ sshd_idle_timeout_value }}
-        regexp: ^ClientAliveInterval
-        validate: sshd -t -f %s
-    name: Set SSH Idle Timeout Interval
+        dest: '{{ item.path }}'
+        line: gpgcheck=1
+        regexp: ^gpgcheck
+    name: Ensure gpgcheck Enabled For All Yum Package Repositories
     tags:
-    - sshd_set_idle_timeout
-    - unknown_severity
-    - restrict_strategy
+    - ensure_gpgcheck_never_disabled
+    - high_severity
+    - unknown_strategy
     - low_complexity
-    - low_disruption
-    - CCE-27433-2
-    - NIST-800-53-AC-2(5)
-    - NIST-800-53-SA-8(i)
-    - NIST-800-53-AC-12
-    - NIST-800-171-3.1.11
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.6
-    - DISA-STIG-RHEL-07-040320
--   name: Ensure libreswan is installed
-    package: name="{{item}}" state=present
+    - medium_disruption
+    - CCE-26876-3
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+    with_items: '{{ yum_find.files }}'
+-   check_mode: false
+    name: Check existence of yum on Fedora
+    register: yum_config_file
+    stat:
+        path: /etc/yum.conf
+    when: ansible_distribution == "Fedora"
+-   ini_file:
+        create: false
+        dest: '{{item}}'
+        option: gpgcheck
+        section: main
+        value: 1
+    name: Ensure GPG check is globally activated (yum)
     tags:
-    - package_libreswan_installed
+    - ensure_gpgcheck_globally_activated
+    - high_severity
+    - unknown_strategy
+    - low_complexity
+    - medium_disruption
+    - CCE-26989-4
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-020050
+    when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or yum_config_file.stat.exists
+    with_items: /etc/yum.conf
+-   ini_file:
+        create: false
+        dest: '{{item}}'
+        option: gpgcheck
+        section: main
+        value: 1
+    name: Ensure GPG check is globally activated (dnf)
+    tags:
+    - ensure_gpgcheck_globally_activated
+    - high_severity
+    - unknown_strategy
+    - low_complexity
+    - medium_disruption
+    - CCE-26989-4
+    - NIST-800-53-CM-5(3)
+    - NIST-800-53-SI-7
+    - NIST-800-53-MA-1(b)
+    - NIST-800-171-3.4.8
+    - PCI-DSS-Req-6.2
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-020050
+    when: ansible_distribution == "Fedora"
+    with_items: /etc/dnf/dnf.conf
+-   changed_when: false
+    check_mode: false
+    failed_when: false
+    name: Read list of files with incorrect permissions
+    register: files_with_incorrect_permissions
+    shell: rpm -Va | grep '^.M' | cut -d ' ' -f5- | sed -r 's;^.*\s+(.+);\1;g'
+    tags:
+    - rpm_verify_permissions
+    - high_severity
+    - restrict_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27209-6
+    - NIST-800-53-AC-6
+    - NIST-800-53-AU-9(1)
+    - NIST-800-53-AU-9(3)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010010
+-   name: Correct file permissions with RPM
+    shell: rpm --quiet --setperms $(rpm -qf '{{item}}')
+    tags:
+    - rpm_verify_permissions
+    - high_severity
+    - restrict_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27209-6
+    - NIST-800-53-AC-6
+    - NIST-800-53-AU-9(1)
+    - NIST-800-53-AU-9(3)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010010
+    when: files_with_incorrect_permissions.stdout_lines | length > 0
+    with_items: '{{ files_with_incorrect_permissions.stdout_lines }}'
+-   name: 'Set fact: Package manager reinstall command (dnf)'
+    set_fact:
+        package_manager_reinstall_cmd: dnf reinstall -y
+    tags:
+    - rpm_verify_hashes
+    - high_severity
+    - unknown_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27157-7
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SI-7(1)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010020
+    when: ansible_distribution == "Fedora"
+-   name: 'Set fact: Package manager reinstall command (yum)'
+    set_fact:
+        package_manager_reinstall_cmd: yum reinstall -y
+    tags:
+    - rpm_verify_hashes
+    - high_severity
+    - unknown_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27157-7
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SI-7(1)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010020
+    when: ansible_distribution == "RedHat" or ansible_distribution == "OracleLinux"
+-   changed_when: false
+    check_mode: false
+    name: Read files with incorrect hash
+    register: files_with_incorrect_hash
+    shell: rpm -Va | grep -E '^..5.* /(bin|sbin|lib|lib64|usr)/' | sed -r 's;^.*\s+(.+);\1;g'
+    tags:
+    - rpm_verify_hashes
+    - high_severity
+    - unknown_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27157-7
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SI-7(1)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010020
+    when: package_manager_reinstall_cmd is defined
+-   name: Reinstall packages of files with incorrect hash
+    shell: '{{package_manager_reinstall_cmd}} $(rpm -qf ''{{item}}'')'
+    tags:
+    - rpm_verify_hashes
+    - high_severity
+    - unknown_strategy
+    - high_complexity
+    - medium_disruption
+    - CCE-27157-7
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SI-7(1)
+    - NIST-800-171-3.3.8
+    - NIST-800-171-3.4.1
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.4.1
+    - DISA-STIG-RHEL-07-010020
+    when: package_manager_reinstall_cmd is defined and (files_with_incorrect_hash.stdout_lines | length > 0)
+    with_items: '{{ files_with_incorrect_hash.stdout_lines }}'
+-   name: Ensure aide is installed
+    package:
+        name: '{{item}}'
+        state: present
+    tags:
+    - package_aide_installed
     - medium_severity
     - enable_strategy
     - low_complexity
     - low_disruption
-    - CCE-80170-4
-    - NIST-800-53-AC-17
-    - NIST-800-53-MA-4
-    - NIST-800-53-SC-9
-    - PCI-DSS-Req-4.1
+    - CCE-27096-7
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
     with_items:
-    - libreswan
+    - aide
+-   name: Ensure AIDE is installed
+    package:
+        name: '{{item}}'
+        state: present
+    tags:
+    - aide_periodic_cron_checking
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26952-2
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-3(5)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+    - DISA-STIG-RHEL-07-020030
+    with_items:
+    - aide
+-   cron:
+        hour: 4
+        job: /usr/sbin/aide --check
+        minute: 5
+        name: run AIDE check
+        user: root
+        weekday: 0
+    name: Configure Periodic Execution of AIDE
+    tags:
+    - aide_periodic_cron_checking
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26952-2
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-3(5)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+    - DISA-STIG-RHEL-07-020030
+-   name: Ensure AIDE is installed
+    package:
+        name: '{{item}}'
+        state: present
+    tags:
+    - aide_build_database
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27220-3
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+    with_items:
+    - aide
+-   name: Build and Test AIDE Database
+    shell: /usr/sbin/aide --init
+    tags:
+    - aide_build_database
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27220-3
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+-   name: Check whether the stock AIDE Database exists
+    register: aide_database_stat
+    stat:
+        path: /var/lib/aide/aide.db.new.gz
+    tags:
+    - aide_build_database
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27220-3
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+-   copy:
+        backup: true
+        dest: /var/lib/aide/aide.db.gz
+        remote_src: true
+        src: /var/lib/aide/aide.db.new.gz
+    name: Stage AIDE Database
+    tags:
+    - aide_build_database
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27220-3
+    - NIST-800-53-CM-3(d)
+    - NIST-800-53-CM-3(e)
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+    when: aide_database_stat.stat.exists is defined and aide_database_stat.stat.exists
+-   name: Does prelink file exist
+    register: prelink_exists
+    stat:
+        path: /etc/sysconfig/prelink
+    tags:
+    - disable_prelink
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27078-5
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - NIST-800-171-3.13.11
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+-   lineinfile:
+        line: PRELINKING=no
+        path: /etc/sysconfig/prelink
+        regexp: ^PRELINKING=
+    name: disable prelinking
+    tags:
+    - disable_prelink
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27078-5
+    - NIST-800-53-CM-6(d)
+    - NIST-800-53-CM-6(3)
+    - NIST-800-53-SC-28
+    - NIST-800-53-SI-7
+    - NIST-800-171-3.13.11
+    - PCI-DSS-Req-11.5
+    - CJIS-5.10.1.3
+    when: prelink_exists.stat.exists == True
+-   ini_file:
+        create: true
+        dest: /etc/dconf/db/local.d/00-security-settings
+        option: picture-uri
+        section: org/gnome/desktop/screensaver
+        value: string ''
+    name: Implement Blank Screensaver
+    tags:
+    - dconf_gnome_screensaver_mode_blank
+    - unknown_severity
+    - unknown_strategy
+    - low_complexity
+    - medium_disruption
+    - CCE-80113-4
+    - NIST-800-53-AC-11(b)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
 -   lineinfile:
         create: true
-        dest: /etc/default/useradd
-        line: INACTIVE={{ var_account_disable_post_pw_expiration }}
-        regexp: ^INACTIVE
-    name: Set Account Expiration Following Inactivity
+        line: /org/gnome/desktop/screensaver/picture-uri
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/screensaver/picture-uri
+    name: Prevent user modification of GNOME picture-uri
     tags:
-    - account_disable_post_pw_expiration
-    - medium_severity
-    - restrict_strategy
+    - dconf_gnome_screensaver_mode_blank
+    - unknown_severity
+    - unknown_strategy
     - low_complexity
-    - low_disruption
-    - CCE-27355-7
-    - NIST-800-53-AC-2(2)
-    - NIST-800-53-AC-2(3)
-    - NIST-800-53-IA-4(e)
-    - NIST-800-171-3.5.6
-    - PCI-DSS-Req-8.1.4
-    - CJIS-5.6.2.1.1
-    - DISA-STIG-RHEL-07-010310
+    - medium_disruption
+    - CCE-80113-4
+    - NIST-800-53-AC-11(b)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+-   ini_file:
+        create: true
+        dest: /etc/dconf/db/local.d/00-security-settings
+        option: lock-enabled
+        section: org/gnome/desktop/screensaver
+        value: 'true'
+    name: Enable GNOME3 Screensaver Lock After Idle Period
+    tags:
+    - dconf_gnome_screensaver_lock_enabled
+    - medium_severity
+    - unknown_strategy
+    - low_complexity
+    - medium_disruption
+    - CCE-80112-6
+    - NIST-800-53-AC-11(b)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010060
 -   lineinfile:
         create: true
-        dest: /etc/login.defs
-        line: PASS_MAX_DAYS {{ var_accounts_maximum_age_login_defs }}
-        regexp: ^#?PASS_MAX_DAYS
-    name: Set Password Maximum Age
+        line: /org/gnome/desktop/screensaver/lock-enabled
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/screensaver/lock-enabled
+    name: Prevent user modification of GNOME lock-enabled
     tags:
-    - accounts_maximum_age_login_defs
+    - dconf_gnome_screensaver_lock_enabled
     - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27051-2
-    - NIST-800-53-IA-5(f)
-    - NIST-800-53-IA-5(g)
-    - NIST-800-53-IA-5(1)(d)
-    - NIST-800-171-3.5.6
-    - PCI-DSS-Req-8.2.4
-    - CJIS-5.6.2.1
-    - DISA-STIG-RHEL-07-010250
--   name: Prevent Log In to Accounts With Empty Password - system-auth
-    replace:
-        dest: /etc/pam.d/system-auth
-        follow: true
-        regexp: nullok
-    tags:
-    - no_empty_passwords
-    - high_severity
-    - configure_strategy
+    - unknown_strategy
     - low_complexity
     - medium_disruption
-    - CCE-27286-4
-    - NIST-800-53-AC-6
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(a)
-    - NIST-800-171-3.1.1
-    - NIST-800-171-3.1.5
-    - PCI-DSS-Req-8.2.3
-    - CJIS-5.5.2
-    - DISA-STIG-RHEL-07-010290
--   name: Prevent Log In to Accounts With Empty Password - password-auth
-    replace:
-        dest: /etc/pam.d/password-auth
-        follow: true
-        regexp: nullok
+    - CCE-80112-6
+    - NIST-800-53-AC-11(b)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010060
+-   name: XCCDF Value inactivity_timeout_value
+    set_fact:
+        inactivity_timeout_value: '900'
     tags:
-    - no_empty_passwords
-    - high_severity
-    - configure_strategy
+    - always
+-   ini_file:
+        create: true
+        dest: /etc/dconf/db/local.d/00-security-settings
+        option: idle-delay
+        section: org/gnome/desktop/screensaver
+        value: '{{ inactivity_timeout_value }}'
+    name: Set GNOME3 Screensaver Inactivity Timeout
+    tags:
+    - dconf_gnome_screensaver_idle_delay
+    - medium_severity
+    - unknown_strategy
     - low_complexity
     - medium_disruption
-    - CCE-27286-4
-    - NIST-800-53-AC-6
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(a)
-    - NIST-800-171-3.1.1
-    - NIST-800-171-3.1.5
-    - PCI-DSS-Req-8.2.3
-    - CJIS-5.5.2
-    - DISA-STIG-RHEL-07-010290
+    - CCE-80110-0
+    - NIST-800-53-AC-11(a)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010070
 -   lineinfile:
-        dest: /etc/login.defs
-        line: ENCRYPT_METHOD SHA512
-        regexp: ^#?ENCRYPT_METHOD
-        state: present
-    name: Set Password Hashing Algorithm in /etc/login.defs
+        create: true
+        line: /org/gnome/desktop/screensaver/idle-delay
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/screensaver/idle-delay
+    name: Prevent user modification of GNOME idle-delay
     tags:
-    - set_password_hashing_algorithm_logindefs
+    - dconf_gnome_screensaver_idle_delay
     - medium_severity
-    - restrict_strategy
+    - unknown_strategy
     - low_complexity
-    - low_disruption
-    - CCE-27124-7
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(c)
-    - NIST-800-53-IA-7
-    - NIST-800-171-3.13.11
-    - PCI-DSS-Req-8.2.1
-    - CJIS-5.6.2.2
-    - DISA-STIG-RHEL-07-010210
+    - medium_disruption
+    - CCE-80110-0
+    - NIST-800-53-AC-11(a)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010070
+-   ini_file:
+        create: true
+        dest: /etc/dconf/db/local.d/00-security-settings
+        option: idle_activation_enabled
+        section: org/gnome/desktop/screensaver
+        value: 'true'
+    name: Enable GNOME3 Screensaver Idle Activation
+    tags:
+    - dconf_gnome_screensaver_idle_activation_enabled
+    - medium_severity
+    - unknown_strategy
+    - low_complexity
+    - medium_disruption
+    - CCE-80111-8
+    - NIST-800-53-AC-11(a)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010100
 -   lineinfile:
-        dest: /etc/libuser.conf
-        insertafter: ^.default]
-        line: crypt_style = sha512
-        regexp: ^#?crypt_style
-        state: present
-    name: Set Password Hashing Algorithm in /etc/libuser.conf
+        create: true
+        line: /org/gnome/desktop/screensaver/idle-activation-enabled
+        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
+        regexp: ^/org/gnome/desktop/screensaver/idle-activation-enabled
+    name: Prevent user modification of GNOME idle_activation_enabled
     tags:
-    - set_password_hashing_algorithm_libuserconf
+    - dconf_gnome_screensaver_idle_activation_enabled
     - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27053-8
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(c)
-    - NIST-800-53-IA-7
-    - NIST-800-171-3.13.11
-    - PCI-DSS-Req-8.2.1
-    - CJIS-5.6.2.2
-    - DISA-STIG-RHEL-07-010220
--   name: Do not allow users to reuse recent passwords - system-auth (change)
-    replace:
-        dest: /etc/pam.d/system-auth
-        follow: true
-        regexp: ^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$
-        replace: \g<1>{{ var_password_pam_unix_remember }}\g<3>
-    tags:
-    - accounts_password_pam_unix_remember
-    - medium_severity
-    - configure_strategy
+    - unknown_strategy
     - low_complexity
     - medium_disruption
-    - CCE-26923-3
-    - NIST-800-53-IA-5(f)
-    - NIST-800-53-IA-5(1)(e)
-    - NIST-800-171-3.5.8
-    - PCI-DSS-Req-8.2.5
-    - CJIS-5.6.2.1.1
-    - DISA-STIG-RHEL-07-010270
--   name: Do not allow users to reuse recent passwords - system-auth (add)
-    replace:
-        dest: /etc/pam.d/system-auth
-        follow: true
-        regexp: ^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$
-        replace: \g<0> remember={{ var_password_pam_unix_remember }}
-    tags:
-    - accounts_password_pam_unix_remember
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-26923-3
-    - NIST-800-53-IA-5(f)
-    - NIST-800-53-IA-5(1)(e)
-    - NIST-800-171-3.5.8
-    - PCI-DSS-Req-8.2.5
-    - CJIS-5.6.2.1.1
-    - DISA-STIG-RHEL-07-010270
--   name: set auth pam_faillock before pam_unix.so
-    pamd:
-        control: sufficient
-        module_arguments: preauth silent deny={{ var_accounts_passwords_pam_faillock_deny }} unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time
-            }} fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
-        module_path: pam_unix.so
-        name: system-auth
-        new_control: required
-        new_module_path: pam_faillock.so
-        new_type: auth
-        state: before
-        type: auth
-    tags:
-    - accounts_passwords_pam_faillock_deny
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27350-8
-    - NIST-800-53-AC-7(b)
-    - NIST-800-171-3.1.8
-    - PCI-DSS-Req-8.1.6
-    - CJIS-5.5.3
-    - DISA-STIG-RHEL-07-010320
--   name: set auth pam_faillock after pam_unix.so
-    pamd:
-        control: sufficient
-        module_arguments: preauth silent deny={{ var_accounts_passwords_pam_faillock_deny }} unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time
-            }} fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
-        module_path: pam_unix.so
-        name: system-auth
-        new_control: '[default=die]'
-        new_module_path: pam_faillock.so
-        new_type: auth
-        state: after
-        type: auth
-    tags:
-    - accounts_passwords_pam_faillock_deny
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27350-8
-    - NIST-800-53-AC-7(b)
-    - NIST-800-171-3.1.8
-    - PCI-DSS-Req-8.1.6
-    - CJIS-5.5.3
-    - DISA-STIG-RHEL-07-010320
--   name: set account pam_faillock before pam_unix.so
-    pamd:
-        control: required
-        module_path: pam_unix.so
-        name: system-auth
-        new_control: required
-        new_module_path: pam_faillock.so
-        new_type: account
-        state: before
-        type: account
-    tags:
-    - accounts_passwords_pam_faillock_deny
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27350-8
-    - NIST-800-53-AC-7(b)
-    - NIST-800-171-3.1.8
-    - PCI-DSS-Req-8.1.6
-    - CJIS-5.5.3
-    - DISA-STIG-RHEL-07-010320
--   lineinfile: create=yes dest="/etc/security/pwquality.conf" regexp="^minlen" line="minlen = {{ var_password_pam_minlen
-        }}"
-    name: Ensure PAM variable minlen is set accordingly
-    tags:
-    - accounts_password_pam_minlen
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27293-0
-    - NIST-800-53-IA-5(1)(a)
-    - PCI-DSS-Req-8.2.3
-    - CJIS-5.6.2.1.1
-    - DISA-STIG-RHEL-07-010280
--   lineinfile: create=yes dest="/etc/security/pwquality.conf" regexp="^dcredit" line="dcredit = {{ var_password_pam_dcredit
-        }}"
-    name: Ensure PAM variable dcredit is set accordingly
-    tags:
-    - accounts_password_pam_dcredit
-    - medium_severity
-    - CCE-27214-6
-    - NIST-800-53-IA-5(1)(a)
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-194
-    - PCI-DSS-Req-8.2.3
-    - DISA-STIG-RHEL-07-010140
--   lineinfile: create=yes dest="/etc/security/pwquality.conf" regexp="^lcredit" line="lcredit = {{ var_password_pam_lcredit
-        }}"
-    name: Ensure PAM variable lcredit is set accordingly
-    tags:
-    - accounts_password_pam_lcredit
-    - medium_severity
-    - CCE-27345-8
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(a)
-    - PCI-DSS-Req-8.2.3
-    - DISA-STIG-RHEL-07-010130
--   lineinfile: create=yes dest="/etc/security/pwquality.conf" regexp="^ucredit" line="ucredit = {{ var_password_pam_ucredit
-        }}"
-    name: Ensure PAM variable ucredit is set accordingly
-    tags:
-    - accounts_password_pam_ucredit
-    - medium_severity
-    - CCE-27200-5
-    - NIST-800-53-IA-5(b)
-    - NIST-800-53-IA-5(c)
-    - NIST-800-53-IA-5(1)(a)
-    - PCI-DSS-Req-8.2.3
-    - DISA-STIG-RHEL-07-010120
--   file: path="{{item}}" mode=0000
+    - CCE-80111-8
+    - NIST-800-53-AC-11(a)
+    - NIST-800-171-3.1.10
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.5
+    - DISA-STIG-RHEL-07-010100
+-   file:
+        mode: 0
+        path: '{{ item }}'
     name: Ensure permission 0000 on /etc/shadow
     tags:
     - file_permissions_etc_shadow
@@ -332,180 +640,10 @@
     - CJIS-5.5.2.2
     with_items:
     - /etc/shadow
--   find:
-        paths: '{{ ''/etc/group'' | dirname }}'
-        patterns: '{{ ''/etc/group'' | basename }}'
-    name: Find /etc/group file(s)
-    register: files_found
-    tags:
-    - file_permissions_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26949-8
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
 -   file:
         mode: 420
-        path: '{{ item.path }}'
-    name: Set permissions
-    tags:
-    - file_permissions_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26949-8
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
-    with_items:
-    - '{{ files_found.files }}'
--   find:
-        paths: '{{ ''/etc/passwd'' | dirname }}'
-        patterns: '{{ ''/etc/passwd'' | basename }}'
-    name: Find /etc/passwd file(s)
-    register: files_found
-    tags:
-    - file_groupowner_etc_passwd
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26639-5
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
--   file:
-        group: root
-        path: '{{ item.path }}'
-    name: Set group ownership to root
-    tags:
-    - file_groupowner_etc_passwd
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26639-5
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
-    with_items:
-    - '{{ files_found.files }}'
--   find:
-        paths: '{{ ''/etc/passwd'' | dirname }}'
-        patterns: '{{ ''/etc/passwd'' | basename }}'
-    name: Find /etc/passwd file(s)
-    register: files_found
-    tags:
-    - file_owner_etc_passwd
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27138-7
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
--   file:
-        owner: root
-        path: '{{ item.path }}'
-    name: Set user ownership to root
-    tags:
-    - file_owner_etc_passwd
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27138-7
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
-    with_items:
-    - '{{ files_found.files }}'
--   find:
-        paths: '{{ ''/etc/group'' | dirname }}'
-        patterns: '{{ ''/etc/group'' | basename }}'
-    name: Find /etc/group file(s)
-    register: files_found
-    tags:
-    - file_owner_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26933-2
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
--   file:
-        owner: root
-        path: '{{ item.path }}'
-    name: Set user ownership to root
-    tags:
-    - file_owner_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26933-2
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
-    with_items:
-    - '{{ files_found.files }}'
--   find:
-        paths: '{{ ''/etc/group'' | dirname }}'
-        patterns: '{{ ''/etc/group'' | basename }}'
-    name: Find /etc/group file(s)
-    register: files_found
-    tags:
-    - file_groupowner_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27037-1
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
--   file:
-        group: root
-        path: '{{ item.path }}'
-    name: Set group ownership to root
-    tags:
-    - file_groupowner_etc_group
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27037-1
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
-    with_items:
-    - '{{ files_found.files }}'
--   find:
-        paths: '{{ ''/etc/passwd'' | dirname }}'
-        patterns: '{{ ''/etc/passwd'' | basename }}'
-    name: Find /etc/passwd file(s)
-    register: files_found
-    tags:
-    - file_permissions_etc_passwd
-    - medium_severity
-    - configure_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26887-0
-    - NIST-800-53-AC-6
-    - PCI-DSS-Req-8.7.c
-    - CJIS-5.5.2.2
--   file:
-        mode: 420
-        path: '{{ item.path }}'
-    name: Set permissions
+        path: '{{ item }}'
+    name: Ensure permission 0644 on /etc/passwd
     tags:
     - file_permissions_etc_passwd
     - medium_severity
@@ -517,7 +655,189 @@
     - PCI-DSS-Req-8.7.c
     - CJIS-5.5.2.2
     with_items:
-    - '{{ files_found.files }}'
+    - /etc/passwd
+-   file:
+        mode: 420
+        path: '{{ item }}'
+    name: Ensure permission 0644 on /etc/group
+    tags:
+    - file_permissions_etc_group
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26949-8
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/group
+-   file:
+        owner: 0
+        path: '{{ item }}'
+    name: Ensure owner 0 on /etc/shadow
+    tags:
+    - file_owner_etc_shadow
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26795-5
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/shadow
+-   file:
+        owner: 0
+        path: '{{ item }}'
+    name: Ensure owner 0 on /etc/passwd
+    tags:
+    - file_owner_etc_passwd
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27138-7
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/passwd
+-   file:
+        owner: 0
+        path: '{{ item }}'
+    name: Ensure owner 0 on /etc/group
+    tags:
+    - file_owner_etc_group
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26933-2
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/group
+-   file:
+        group: 0
+        path: '{{ item }}'
+    name: Ensure group owner 0 on /etc/shadow
+    tags:
+    - file_groupowner_etc_shadow
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27125-4
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/shadow
+-   file:
+        group: 0
+        path: '{{ item }}'
+    name: Ensure group owner 0 on /etc/passwd
+    tags:
+    - file_groupowner_etc_passwd
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-26639-5
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/passwd
+-   file:
+        group: 0
+        path: '{{ item }}'
+    name: Ensure group owner 0 on /etc/group
+    tags:
+    - file_groupowner_etc_group
+    - medium_severity
+    - configure_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27037-1
+    - NIST-800-53-AC-6
+    - PCI-DSS-Req-8.7.c
+    - CJIS-5.5.2.2
+    with_items:
+    - /etc/group
+-   name: Ensure libreswan is installed
+    package:
+        name: '{{item}}'
+        state: present
+    tags:
+    - package_libreswan_installed
+    - medium_severity
+    - enable_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-80170-4
+    - NIST-800-53-AC-17
+    - NIST-800-53-MA-4
+    - NIST-800-53-SC-9
+    - PCI-DSS-Req-4.1
+    with_items:
+    - libreswan
+-   name: XCCDF Value var_auditd_space_left_action
+    set_fact:
+        var_auditd_space_left_action: email
+    tags:
+    - always
+-   lineinfile:
+        dest: /etc/audit/auditd.conf
+        line: space_left_action = {{ var_auditd_space_left_action }}
+        regexp: ^space_left_action*
+    name: Configure auditd space_left Action on Low Disk Space
+    tags:
+    - auditd_data_retention_space_left_action
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27375-5
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-4
+    - NIST-800-53-AU-5(1)
+    - NIST-800-53-AU-5(b)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.3.1
+    - PCI-DSS-Req-10.7
+    - CJIS-5.4.1.1
+-   name: XCCDF Value var_auditd_max_log_file_action
+    set_fact:
+        var_auditd_max_log_file_action: rotate
+    tags:
+    - always
+-   lineinfile:
+        dest: /etc/audit/auditd.conf
+        line: max_log_file_action {{ var_auditd_max_log_file_action }}
+        state: present
+    name: Configure auditd max_log_file_action Upon Reaching Maximum Log Size
+    tags:
+    - auditd_data_retention_max_log_file_action
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27231-0
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-4
+    - NIST-800-53-AU-11
+    - NIST-800-53-IR-5
+    - PCI-DSS-Req-10.7
+    - CJIS-5.4.1.1
+-   name: XCCDF Value var_auditd_max_log_file
+    set_fact:
+        var_auditd_max_log_file: '6'
+    tags:
+    - always
 -   lineinfile:
         dest: /etc/audit/auditd.conf
         line: max_log_file {{ var_auditd_max_log_file }}
@@ -535,6 +855,36 @@
     - NIST-800-53-IR-5
     - PCI-DSS-Req-10.7
     - CJIS-5.4.1.1
+-   name: XCCDF Value var_auditd_admin_space_left_action
+    set_fact:
+        var_auditd_admin_space_left_action: single
+    tags:
+    - always
+-   lineinfile:
+        dest: /etc/audit/auditd.conf
+        line: admin_space_left_action = {{ var_auditd_admin_space_left_action }}
+        regexp: ^admin_space_left_action*
+    name: Configure auditd admin_space_left Action on Low Disk Space
+    tags:
+    - auditd_data_retention_admin_space_left_action
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27370-6
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-4
+    - NIST-800-53-AU-5(b)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.3.1
+    - PCI-DSS-Req-10.7
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030340
+-   name: XCCDF Value var_auditd_action_mail_acct
+    set_fact:
+        var_auditd_action_mail_acct: root
+    tags:
+    - always
 -   lineinfile:
         dest: /etc/audit/auditd.conf
         line: action_mail_acct = {{ var_auditd_action_mail_acct }}
@@ -556,1663 +906,6 @@
     - PCI-DSS-Req-10.7.a
     - CJIS-5.4.1.1
     - DISA-STIG-RHEL-07-030350
--   lineinfile:
-        dest: /etc/audit/auditd.conf
-        line: admin_space_left_action = {{ var_auditd_admin_space_left_action }}
-        regexp: ^admin_space_left_action*
-    name: Configure auditd admin_space_left Action on Low Disk Space
-    tags:
-    - auditd_data_retention_admin_space_left_action
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27370-6
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-4
-    - NIST-800-53-AU-5(b)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.3.1
-    - PCI-DSS-Req-10.7
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030340
--   lineinfile:
-        dest: /etc/audit/auditd.conf
-        line: max_log_file_action {{ var_auditd_max_log_file_action }}
-        state: present
-    name: Configure auditd max_log_file_action Upon Reaching Maximum Log Size
-    tags:
-    - auditd_data_retention_max_log_file_action
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27231-0
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-4
-    - NIST-800-53-AU-11
-    - NIST-800-53-IR-5
-    - PCI-DSS-Req-10.7
-    - CJIS-5.4.1.1
--   lineinfile:
-        dest: /etc/audit/auditd.conf
-        line: space_left_action = {{ var_auditd_space_left_action }}
-        regexp: ^space_left_action*
-    name: Configure auditd space_left Action on Low Disk Space
-    tags:
-    - auditd_data_retention_space_left_action
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27375-5
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-4
-    - NIST-800-53-AU-5(1)
-    - NIST-800-53-AU-5(b)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.3.1
-    - PCI-DSS-Req-10.7
-    - CJIS-5.4.1.1
--   name: Set architecture for audit fchown tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fchown
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fchown.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fchown.files | map(attribute=''path'') | list | first }}'
-    when: find_fchown.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchown rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27356-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030380
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchown rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27356-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030380
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchown rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27356-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030380
-    with_items:
-    - -a always,exit -F arch=b32 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchown rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27356-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030380
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit setxattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_setxattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_setxattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_setxattr.files | map(attribute=''path'') | list | first }}'
-    when: find_setxattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the setxattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_setxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27213-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030440
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the setxattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_setxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27213-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030440
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the setxattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_setxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27213-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030440
-    with_items:
-    - -a always,exit -F arch=b32 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the setxattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_setxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27213-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030440
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit fsetxattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fsetxattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fsetxattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fsetxattr.files | map(attribute=''path'') | list | first }}'
-    when: find_fsetxattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fsetxattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27389-6
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030450
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fsetxattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27389-6
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030450
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fsetxattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27389-6
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030450
-    with_items:
-    - -a always,exit -F arch=b32 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fsetxattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27389-6
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030450
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit removexattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_removexattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_removexattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_removexattr.files | map(attribute=''path'') | list | first }}'
-    when: find_removexattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the removexattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_removexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27367-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030470
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the removexattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_removexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27367-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030470
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the removexattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_removexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27367-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030470
-    with_items:
-    - -a always,exit -F arch=b32 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the removexattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_removexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27367-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030470
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit fchownat tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fchownat
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fchownat.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fchownat.files | map(attribute=''path'') | list | first }}'
-    when: find_fchownat.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchownat rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fchownat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27387-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030400
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchownat rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchownat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27387-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030400
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchownat rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fchownat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27387-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030400
-    with_items:
-    - -a always,exit -F arch=b32 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchownat rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchownat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27387-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030400
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit chmod tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_chmod
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_chmod.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_chmod.files | map(attribute=''path'') | list | first }}'
-    when: find_chmod.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the chmod rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_chmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27339-1
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030410
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the chmod rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_chmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27339-1
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030410
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the chmod rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_chmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27339-1
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030410
-    with_items:
-    - -a always,exit -F arch=b32 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the chmod rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_chmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27339-1
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030410
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit chown tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_chown
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_chown.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_chown.files | map(attribute=''path'') | list | first }}'
-    when: find_chown.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the chown rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_chown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27364-9
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030370
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the chown rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_chown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27364-9
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030370
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the chown rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_chown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27364-9
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030370
-    with_items:
-    - -a always,exit -F arch=b32 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the chown rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_chown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27364-9
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030370
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit fremovexattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fremovexattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fremovexattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fremovexattr.files | map(attribute=''path'') | list | first }}'
-    when: find_fremovexattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fremovexattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27353-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030480
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fremovexattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27353-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030480
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fremovexattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27353-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030480
-    with_items:
-    - -a always,exit -F arch=b32 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fremovexattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27353-2
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030480
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit lsetxattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_lsetxattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_lsetxattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_lsetxattr.files | map(attribute=''path'') | list | first }}'
-    when: find_lsetxattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lsetxattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_lsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27280-7
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030460
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lsetxattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_lsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27280-7
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030460
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lsetxattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_lsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27280-7
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030460
-    with_items:
-    - -a always,exit -F arch=b32 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lsetxattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_lsetxattr
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27280-7
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030460
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit fchmod tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fchmod
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fchmod.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fchmod.files | map(attribute=''path'') | list | first }}'
-    when: find_fchmod.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchmod rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fchmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27393-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030420
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchmod rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27393-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030420
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchmod rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fchmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27393-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030420
-    with_items:
-    - -a always,exit -F arch=b32 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchmod rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchmod
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27393-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030420
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit lchown tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_lchown
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_lchown.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_lchown.files | map(attribute=''path'') | list | first }}'
-    when: find_lchown.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lchown rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_lchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27083-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030390
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lchown rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_lchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27083-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030390
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lchown rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_lchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27083-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030390
-    with_items:
-    - -a always,exit -F arch=b32 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lchown rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_lchown
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27083-5
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030390
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit fchmodat tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_fchmodat
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_fchmodat.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_fchmodat.files | map(attribute=''path'') | list | first }}'
-    when: find_fchmodat.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchmodat rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_fchmodat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27388-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030430
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the fchmodat rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchmodat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27388-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030430
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchmodat rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_fchmodat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27388-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030430
-    with_items:
-    - -a always,exit -F arch=b32 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the fchmodat rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_fchmodat
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27388-8
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030430
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   name: Set architecture for audit lremovexattr tasks
-    set_fact:
-        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
--   find:
-        contains: -F key=perm_mod$
-        paths: /etc/audit/rules.d
-        patterns: '*.rules'
-        recurse: false
-    name: Search /etc/audit/rules.d for other DAC audit rules
-    register: find_lremovexattr
--   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
-    set_fact:
-        all_files:
-        - /etc/audit/rules.d/privileged.rules
-    when: find_lremovexattr.matched == 0
--   name: Use matched file as the recipient for the rule
-    set_fact:
-        all_files:
-        - '{{ find_lremovexattr.files | map(attribute=''path'') | list | first }}'
-    when: find_lremovexattr.matched > 0
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b32 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lremovexattr rule in rules.d when on x86
-    tags:
-    - audit_rules_dac_modification_lremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27410-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030490
--   lineinfile:
-        create: true
-        line: -a always,exit -F arch=b64 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
-        path: '{{ all_files[0] }}'
-    name: Inserts/replaces the lremovexattr rule in rules.d when on x86_64
-    tags:
-    - audit_rules_dac_modification_lremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27410-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030490
-    when: audit_arch == 'b64'
--   lineinfile:
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lremovexattr rule in /etc/audit/audit.rules when on x86
-    tags:
-    - audit_rules_dac_modification_lremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27410-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030490
-    with_items:
-    - -a always,exit -F arch=b32 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
--   lineinfile:
-        create: true
-        dest: /etc/audit/audit.rules
-        line: '{{ item }}'
-        state: present
-    name: Inserts/replaces the lremovexattr rule in audit.rules when on x86_64
-    tags:
-    - audit_rules_dac_modification_lremovexattr
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27410-0
-    - NIST-800-53-AC-17(7)
-    - NIST-800-53-AU-1(b)
-    - NIST-800-53-AU-2(a)
-    - NIST-800-53-AU-2(c)
-    - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-12(a)
-    - NIST-800-53-AU-12(c)
-    - NIST-800-53-IR-5
-    - NIST-800-171-3.1.7
-    - PCI-DSS-Req-10.5.5
-    - CJIS-5.4.1.1
-    - DISA-STIG-RHEL-07-030490
-    when: audit_arch == 'b64'
-    with_items:
-    - -a always,exit -F arch=b64 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
 -   check_mode: false
     name: Search for privileged commands
     register: find_result
@@ -2356,28 +1049,1610 @@
     - DISA-STIG-RHEL-07-030360
     with_items:
     - '{{ files_result.results }}'
--   name: Enable Auditing for Processes Which Start Prior to the Audit Daemon
-    shell: /sbin/grubby --update-kernel=ALL --args="audit=1"
+-   name: Set architecture for audit setxattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_setxattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_setxattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_setxattr.files | map(attribute=''path'') | list | first }}'
+    when: find_setxattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the setxattr rule in rules.d when on x86
     tags:
-    - bootloader_audit_argument
-    - medium_severity
+    - audit_rules_dac_modification_setxattr
+    - unknown_severity
     - restrict_strategy
     - low_complexity
     - low_disruption
-    - CCE-27212-0
-    - NIST-800-53-AC-17(1)
-    - NIST-800-53-AU-14(1)
+    - CCE-27213-8
+    - NIST-800-53-AC-17(7)
     - NIST-800-53-AU-1(b)
     - NIST-800-53-AU-2(a)
     - NIST-800-53-AU-2(c)
     - NIST-800-53-AU-2(d)
-    - NIST-800-53-AU-10
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
     - NIST-800-53-IR-5
-    - NIST-800-171-3.3.1
-    - PCI-DSS-Req-10.3
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
     - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030440
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the setxattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_setxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27213-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030440
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the setxattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_setxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27213-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030440
+    with_items:
+    - -a always,exit -F arch=b32 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the setxattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_setxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27213-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030440
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S setxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit removexattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_removexattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_removexattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_removexattr.files | map(attribute=''path'') | list | first }}'
+    when: find_removexattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the removexattr rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_removexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27367-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030470
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the removexattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_removexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27367-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030470
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the removexattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_removexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27367-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030470
+    with_items:
+    - -a always,exit -F arch=b32 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the removexattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_removexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27367-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030470
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S removexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit lsetxattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_lsetxattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_lsetxattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_lsetxattr.files | map(attribute=''path'') | list | first }}'
+    when: find_lsetxattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lsetxattr rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_lsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27280-7
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030460
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lsetxattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_lsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27280-7
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030460
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lsetxattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_lsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27280-7
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030460
+    with_items:
+    - -a always,exit -F arch=b32 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lsetxattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_lsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27280-7
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030460
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S lsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit lremovexattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_lremovexattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_lremovexattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_lremovexattr.files | map(attribute=''path'') | list | first }}'
+    when: find_lremovexattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lremovexattr rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_lremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27410-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030490
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lremovexattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_lremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27410-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030490
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lremovexattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_lremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27410-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030490
+    with_items:
+    - -a always,exit -F arch=b32 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lremovexattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_lremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27410-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030490
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S lremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit lchown tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_lchown
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_lchown.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_lchown.files | map(attribute=''path'') | list | first }}'
+    when: find_lchown.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lchown rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_lchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27083-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030390
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the lchown rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_lchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27083-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030390
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lchown rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_lchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27083-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030390
+    with_items:
+    - -a always,exit -F arch=b32 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the lchown rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_lchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27083-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030390
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S lchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fsetxattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fsetxattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fsetxattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fsetxattr.files | map(attribute=''path'') | list | first }}'
+    when: find_fsetxattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fsetxattr rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27389-6
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030450
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fsetxattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27389-6
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030450
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fsetxattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27389-6
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030450
+    with_items:
+    - -a always,exit -F arch=b32 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fsetxattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fsetxattr
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27389-6
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030450
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fsetxattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fremovexattr tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fremovexattr
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fremovexattr.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fremovexattr.files | map(attribute=''path'') | list | first }}'
+    when: find_fremovexattr.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fremovexattr rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27353-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030480
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fremovexattr rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27353-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030480
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fremovexattr rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27353-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030480
+    with_items:
+    - -a always,exit -F arch=b32 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fremovexattr rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fremovexattr
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27353-2
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030480
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fremovexattr -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fchownat tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fchownat
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fchownat.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fchownat.files | map(attribute=''path'') | list | first }}'
+    when: find_fchownat.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchownat rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fchownat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27387-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030400
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchownat rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchownat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27387-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030400
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchownat rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fchownat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27387-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030400
+    with_items:
+    - -a always,exit -F arch=b32 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchownat rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchownat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27387-0
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030400
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fchownat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fchown tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fchown
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fchown.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fchown.files | map(attribute=''path'') | list | first }}'
+    when: find_fchown.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchown rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27356-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030380
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchown rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27356-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030380
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchown rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27356-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030380
+    with_items:
+    - -a always,exit -F arch=b32 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchown rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27356-5
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030380
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fchown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fchmodat tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fchmodat
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fchmodat.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fchmodat.files | map(attribute=''path'') | list | first }}'
+    when: find_fchmodat.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchmodat rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fchmodat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27388-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030430
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchmodat rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchmodat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27388-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030430
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchmodat rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fchmodat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27388-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030430
+    with_items:
+    - -a always,exit -F arch=b32 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchmodat rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchmodat
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27388-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030430
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fchmodat -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit fchmod tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_fchmod
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_fchmod.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_fchmod.files | map(attribute=''path'') | list | first }}'
+    when: find_fchmod.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchmod rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_fchmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27393-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030420
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the fchmod rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27393-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030420
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchmod rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_fchmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27393-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030420
+    with_items:
+    - -a always,exit -F arch=b32 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the fchmod rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_fchmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27393-8
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030420
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S fchmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit chown tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_chown
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_chown.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_chown.files | map(attribute=''path'') | list | first }}'
+    when: find_chown.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the chown rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_chown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27364-9
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030370
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the chown rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_chown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27364-9
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030370
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the chown rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_chown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27364-9
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030370
+    with_items:
+    - -a always,exit -F arch=b32 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the chown rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_chown
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27364-9
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030370
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S chown -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   name: Set architecture for audit chmod tasks
+    set_fact:
+        audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+-   find:
+        contains: -F key=perm_mod$
+        paths: /etc/audit/rules.d
+        patterns: '*.rules'
+        recurse: false
+    name: Search /etc/audit/rules.d for other DAC audit rules
+    register: find_chmod
+-   name: If existing DAC ruleset not found, use /etc/audit/rules.d/privileged.rules as the recipient for the rule
+    set_fact:
+        all_files:
+        - /etc/audit/rules.d/privileged.rules
+    when: find_chmod.matched == 0
+-   name: Use matched file as the recipient for the rule
+    set_fact:
+        all_files:
+        - '{{ find_chmod.files | map(attribute=''path'') | list | first }}'
+    when: find_chmod.matched > 0
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b32 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the chmod rule in rules.d when on x86
+    tags:
+    - audit_rules_dac_modification_chmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27339-1
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030410
+-   lineinfile:
+        create: true
+        line: -a always,exit -F arch=b64 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+        path: '{{ all_files[0] }}'
+    name: Inserts/replaces the chmod rule in rules.d when on x86_64
+    tags:
+    - audit_rules_dac_modification_chmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27339-1
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030410
+    when: audit_arch == 'b64'
+-   lineinfile:
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the chmod rule in /etc/audit/audit.rules when on x86
+    tags:
+    - audit_rules_dac_modification_chmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27339-1
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030410
+    with_items:
+    - -a always,exit -F arch=b32 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
+-   lineinfile:
+        create: true
+        dest: /etc/audit/audit.rules
+        line: '{{ item }}'
+        state: present
+    name: Inserts/replaces the chmod rule in audit.rules when on x86_64
+    tags:
+    - audit_rules_dac_modification_chmod
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27339-1
+    - NIST-800-53-AC-17(7)
+    - NIST-800-53-AU-1(b)
+    - NIST-800-53-AU-2(a)
+    - NIST-800-53-AU-2(c)
+    - NIST-800-53-AU-2(d)
+    - NIST-800-53-AU-12(a)
+    - NIST-800-53-AU-12(c)
+    - NIST-800-53-IR-5
+    - NIST-800-171-3.1.7
+    - PCI-DSS-Req-10.5.5
+    - CJIS-5.4.1.1
+    - DISA-STIG-RHEL-07-030410
+    when: audit_arch == 'b64'
+    with_items:
+    - -a always,exit -F arch=b64 -S chmod -F auid>=1000 -F auid!=4294967295 -F key=perm_mod
 -   name: Enable service auditd
-    service: name="{{item}}" enabled="yes" state="started"
+    service:
+        enabled: 'yes'
+        name: '{{item}}'
+        state: started
     tags:
     - service_auditd_enabled
     - high_severity
@@ -2401,597 +2676,384 @@
     - DISA-STIG-RHEL-07-030000
     with_items:
     - auditd
--   ini_file:
-        create: true
-        dest: /etc/dconf/db/local.d/00-security-settings
-        option: idle_activation_enabled
-        section: org/gnome/desktop/screensaver
-        value: 'true'
-    name: Enable GNOME3 Screensaver Idle Activation
+-   name: Prevent Log In to Accounts With Empty Password - system-auth
+    replace:
+        dest: /etc/pam.d/system-auth
+        follow: true
+        regexp: nullok
     tags:
-    - dconf_gnome_screensaver_idle_activation_enabled
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80111-8
-    - NIST-800-53-AC-11(a)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010100
--   lineinfile:
-        create: true
-        line: /org/gnome/desktop/screensaver/idle-activation-enabled
-        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
-        regexp: ^/org/gnome/desktop/screensaver/idle-activation-enabled
-    name: Prevent user modification of GNOME idle_activation_enabled
-    tags:
-    - dconf_gnome_screensaver_idle_activation_enabled
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80111-8
-    - NIST-800-53-AC-11(a)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010100
--   ini_file:
-        create: true
-        dest: /etc/dconf/db/local.d/00-security-settings
-        option: idle-delay
-        section: org/gnome/desktop/screensaver
-        value: '{{ inactivity_timeout_value }}'
-    name: Set GNOME3 Screensaver Inactivity Timeout
-    tags:
-    - dconf_gnome_screensaver_idle_delay
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80110-0
-    - NIST-800-53-AC-11(a)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010070
--   lineinfile:
-        create: true
-        line: /org/gnome/desktop/screensaver/idle-delay
-        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
-        regexp: ^/org/gnome/desktop/screensaver/idle-delay
-    name: Prevent user modification of GNOME idle-delay
-    tags:
-    - dconf_gnome_screensaver_idle_delay
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80110-0
-    - NIST-800-53-AC-11(a)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010070
--   ini_file:
-        create: true
-        dest: /etc/dconf/db/local.d/00-security-settings
-        option: picture-uri
-        section: org/gnome/desktop/screensaver
-        value: string ''
-    name: Implement Blank Screensaver
-    tags:
-    - dconf_gnome_screensaver_mode_blank
-    - unknown_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80113-4
-    - NIST-800-53-AC-11(b)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
--   lineinfile:
-        create: true
-        line: /org/gnome/desktop/screensaver/picture-uri
-        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
-        regexp: ^/org/gnome/desktop/screensaver/picture-uri
-    name: Prevent user modification of GNOME picture-uri
-    tags:
-    - dconf_gnome_screensaver_mode_blank
-    - unknown_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80113-4
-    - NIST-800-53-AC-11(b)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
--   ini_file:
-        create: true
-        dest: /etc/dconf/db/local.d/00-security-settings
-        option: lock-enabled
-        section: org/gnome/desktop/screensaver
-        value: 'true'
-    name: Enable GNOME3 Screensaver Lock After Idle Period
-    tags:
-    - dconf_gnome_screensaver_lock_enabled
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80112-6
-    - NIST-800-53-AC-11(b)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010060
--   lineinfile:
-        create: true
-        line: /org/gnome/desktop/screensaver/lock-enabled
-        path: /etc/dconf/db/local.d/locks/00-security-settings-lock
-        regexp: ^/org/gnome/desktop/screensaver/lock-enabled
-    name: Prevent user modification of GNOME lock-enabled
-    tags:
-    - dconf_gnome_screensaver_lock_enabled
-    - medium_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-80112-6
-    - NIST-800-53-AC-11(b)
-    - NIST-800-171-3.1.10
-    - PCI-DSS-Req-8.1.8
-    - CJIS-5.5.5
-    - DISA-STIG-RHEL-07-010060
--   changed_when: false
-    check_mode: false
-    failed_when: false
-    name: Read list of files with incorrect permissions
-    register: files_with_incorrect_permissions
-    shell: rpm -Va | grep '^.M' | cut -d ' ' -f5- | sed -r 's;^.*\s+(.+);\1;g'
-    tags:
-    - rpm_verify_permissions
+    - no_empty_passwords
     - high_severity
-    - restrict_strategy
-    - high_complexity
+    - configure_strategy
+    - low_complexity
     - medium_disruption
-    - CCE-27209-6
+    - CCE-27286-4
     - NIST-800-53-AC-6
-    - NIST-800-53-AU-9(1)
-    - NIST-800-53-AU-9(3)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010010
--   name: Correct file permissions with RPM
-    shell: rpm --setperms $(rpm -qf '{{item}}')
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(a)
+    - NIST-800-171-3.1.1
+    - NIST-800-171-3.1.5
+    - PCI-DSS-Req-8.2.3
+    - CJIS-5.5.2
+    - DISA-STIG-RHEL-07-010290
+-   name: Prevent Log In to Accounts With Empty Password - password-auth
+    replace:
+        dest: /etc/pam.d/password-auth
+        follow: true
+        regexp: nullok
     tags:
-    - rpm_verify_permissions
+    - no_empty_passwords
     - high_severity
-    - restrict_strategy
-    - high_complexity
+    - configure_strategy
+    - low_complexity
     - medium_disruption
-    - CCE-27209-6
+    - CCE-27286-4
     - NIST-800-53-AC-6
-    - NIST-800-53-AU-9(1)
-    - NIST-800-53-AU-9(3)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010010
-    when: files_with_incorrect_permissions.stdout_lines | length > 0
-    with_items: '{{ files_with_incorrect_permissions.stdout_lines }}'
--   name: 'Set fact: Package manager reinstall command (dnf)'
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(a)
+    - NIST-800-171-3.1.1
+    - NIST-800-171-3.1.5
+    - PCI-DSS-Req-8.2.3
+    - CJIS-5.5.2
+    - DISA-STIG-RHEL-07-010290
+-   name: XCCDF Value var_accounts_maximum_age_login_defs
     set_fact:
-        package_manager_reinstall_cmd: dnf reinstall -y
+        var_accounts_maximum_age_login_defs: '90'
     tags:
-    - rpm_verify_hashes
-    - high_severity
-    - unknown_strategy
-    - high_complexity
-    - medium_disruption
-    - CCE-27157-7
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SI-7(1)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010020
-    when: ansible_distribution == "Fedora"
--   name: 'Set fact: Package manager reinstall command (yum)'
-    set_fact:
-        package_manager_reinstall_cmd: yum reinstall -y
-    tags:
-    - rpm_verify_hashes
-    - high_severity
-    - unknown_strategy
-    - high_complexity
-    - medium_disruption
-    - CCE-27157-7
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SI-7(1)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010020
-    when: ansible_distribution == "RedHat" or ansible_distribution == "OracleLinux"
--   changed_when: false
-    check_mode: false
-    name: Read files with incorrect hash
-    register: files_with_incorrect_hash
-    shell: rpm -Va | grep -E '^..5.* /(bin|sbin|lib|lib64|usr)/' | sed -r 's;^.*\s+(.+);\1;g'
-    tags:
-    - rpm_verify_hashes
-    - high_severity
-    - unknown_strategy
-    - high_complexity
-    - medium_disruption
-    - CCE-27157-7
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SI-7(1)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010020
-    when: package_manager_reinstall_cmd is defined
--   name: Reinstall packages of files with incorrect hash
-    shell: '{{package_manager_reinstall_cmd}} $(rpm -qf ''{{item}}'')'
-    tags:
-    - rpm_verify_hashes
-    - high_severity
-    - unknown_strategy
-    - high_complexity
-    - medium_disruption
-    - CCE-27157-7
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SI-7(1)
-    - NIST-800-171-3.3.8
-    - NIST-800-171-3.4.1
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-010020
-    when: package_manager_reinstall_cmd is defined and (files_with_incorrect_hash.stdout_lines | length > 0)
-    with_items: '{{ files_with_incorrect_hash.stdout_lines }}'
--   name: Ensure aide is installed
-    package: name="{{item}}" state=present
-    tags:
-    - package_aide_installed
-    - medium_severity
-    - enable_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27096-7
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
-    with_items:
-    - aide
--   name: Ensure AIDE is installed
-    package: name="{{item}}" state=present
-    tags:
-    - aide_periodic_cron_checking
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26952-2
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-3(5)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
-    - DISA-STIG-RHEL-07-020030
-    with_items:
-    - aide
--   cron:
-        hour: 4
-        job: /usr/sbin/aide --check
-        minute: 5
-        name: run AIDE check
-        user: root
-        weekday: 0
-    name: Configure Periodic Execution of AIDE
-    tags:
-    - aide_periodic_cron_checking
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-26952-2
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-3(5)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
-    - DISA-STIG-RHEL-07-020030
--   name: Ensure AIDE is installed
-    package: name="{{item}}" state=present
-    tags:
-    - aide_build_database
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27220-3
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
-    with_items:
-    - aide
--   name: Build and Test AIDE Database
-    shell: /usr/sbin/aide --init
-    tags:
-    - aide_build_database
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27220-3
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
--   copy:
-        backup: true
-        dest: /var/lib/aide/aide.db.gz
-        remote_src: true
-        src: /var/lib/aide/aide.db.new.gz
-    name: Stage AIDE Database"
-    tags:
-    - aide_build_database
-    - medium_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27220-3
-    - NIST-800-53-CM-3(d)
-    - NIST-800-53-CM-3(e)
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
--   name: Does prelink file exist
-    register: prelink_exists
-    stat: path=/etc/sysconfig/prelink
-    tags:
-    - disable_prelink
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27078-5
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - NIST-800-171-3.13.11
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
--   lineinfile:
-        line: PRELINKING=no
-        path: /etc/sysconfig/prelink
-        regexp: ^PRELINKING=
-    name: disable prelinking
-    tags:
-    - disable_prelink
-    - unknown_severity
-    - restrict_strategy
-    - low_complexity
-    - low_disruption
-    - CCE-27078-5
-    - NIST-800-53-CM-6(d)
-    - NIST-800-53-CM-6(3)
-    - NIST-800-53-SC-28
-    - NIST-800-53-SI-7
-    - NIST-800-171-3.13.11
-    - PCI-DSS-Req-11.5
-    - CJIS-5.10.1.3
-    when: prelink_exists.stat.exists == True
--   find:
-        paths: /etc/yum.repos.d/
-        patterns: '*.repo'
-    name: Find All Yum Repositories
-    register: yum_find
+    - always
 -   lineinfile:
         create: true
-        dest: '{{ item.path }}'
-        line: gpgcheck=1
-        regexp: ^gpgcheck
-    name: Ensure gpgcheck Enabled For All Yum Package Repositories
+        dest: /etc/login.defs
+        line: PASS_MAX_DAYS {{ var_accounts_maximum_age_login_defs }}
+        regexp: ^#?PASS_MAX_DAYS
+    name: Set Password Maximum Age
     tags:
-    - ensure_gpgcheck_never_disabled
-    - high_severity
-    - unknown_strategy
-    - low_complexity
-    - medium_disruption
-    - CCE-26876-3
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
-    with_items: '{{ yum_find.files }}'
--   name: Security patches are up to date
-    package:
-        name: '*'
-        state: latest
-    tags:
-    - security_patches_up_to_date
-    - high_severity
-    - patch_strategy
-    - low_complexity
-    - high_disruption
-    - CCE-26895-3
-    - NIST-800-53-SI-2
-    - NIST-800-53-SI-2(c)
-    - NIST-800-53-MA-1(b)
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-020260
--   check_mode: false
-    name: Read permission of GPG key directory
-    register: gpg_key_directory_permission
-    stat:
-        path: /etc/pki/rpm-gpg/
-    tags:
-    - ensure_redhat_gpgkey_installed
-    - high_severity
+    - accounts_maximum_age_login_defs
+    - medium_severity
     - restrict_strategy
-    - medium_complexity
-    - medium_disruption
-    - CCE-26957-1
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
--   changed_when: false
-    check_mode: false
-    name: Read signatures in GPG key
-    register: gpg_fingerprints
-    shell: gpg --with-fingerprint '/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release' | grep 'Key fingerprint =' | tr -s ' ' | sed
-        's;.*= ;;g'
-    tags:
-    - ensure_redhat_gpgkey_installed
-    - high_severity
-    - restrict_strategy
-    - medium_complexity
-    - medium_disruption
-    - CCE-26957-1
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
--   name: Set Fact - Valid fingerprints
+    - low_complexity
+    - low_disruption
+    - CCE-27051-2
+    - NIST-800-53-IA-5(f)
+    - NIST-800-53-IA-5(g)
+    - NIST-800-53-IA-5(1)(d)
+    - NIST-800-171-3.5.6
+    - PCI-DSS-Req-8.2.4
+    - CJIS-5.6.2.1
+    - DISA-STIG-RHEL-07-010250
+-   name: XCCDF Value var_account_disable_post_pw_expiration
     set_fact:
-        gpg_valid_fingerprints: ("567E 347A D004 4ADE 55BA 8A5F 199E 2F91 FD43 1D51" "43A6 E49C 4A38 F4BE 9ABF 2A53 4568 9C88
-            2FA6 58E0")
+        var_account_disable_post_pw_expiration: '90'
     tags:
-    - ensure_redhat_gpgkey_installed
-    - high_severity
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/default/useradd
+        line: INACTIVE={{ var_account_disable_post_pw_expiration }}
+        regexp: ^INACTIVE
+    name: Set Account Expiration Following Inactivity
+    tags:
+    - account_disable_post_pw_expiration
+    - medium_severity
     - restrict_strategy
-    - medium_complexity
-    - medium_disruption
-    - CCE-26957-1
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
--   name: Import RedHat GPG key
-    rpm_key:
-        key: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+    - low_complexity
+    - low_disruption
+    - CCE-27355-7
+    - NIST-800-53-AC-2(2)
+    - NIST-800-53-AC-2(3)
+    - NIST-800-53-IA-4(e)
+    - NIST-800-171-3.5.6
+    - PCI-DSS-Req-8.1.4
+    - CJIS-5.6.2.1.1
+    - DISA-STIG-RHEL-07-010310
+-   lineinfile:
+        dest: /etc/login.defs
+        line: ENCRYPT_METHOD SHA512
+        regexp: ^#?ENCRYPT_METHOD
         state: present
+    name: Set Password Hashing Algorithm in /etc/login.defs
     tags:
-    - ensure_redhat_gpgkey_installed
-    - high_severity
+    - set_password_hashing_algorithm_logindefs
+    - medium_severity
     - restrict_strategy
-    - medium_complexity
-    - medium_disruption
-    - CCE-26957-1
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
-    when: (gpg_key_directory_permission.stat.mode <= '0755') and (( gpg_fingerprints.stdout_lines | difference(gpg_valid_fingerprints))
-        | length == 0) and (gpg_fingerprints.stdout_lines | length > 0) and (ansible_distribution == "RedHat")
--   check_mode: false
-    name: Check existence of yum on Fedora
-    register: yum_config_file
-    stat:
-        path: /etc/yum.conf
-    when: ansible_distribution == "Fedora"
--   ini_file:
-        create: false
-        dest: '{{item}}'
-        option: gpgcheck
-        section: main
-        value: 1
-    name: Ensure GPG check is globally activated (yum)
+    - low_complexity
+    - low_disruption
+    - CCE-27124-7
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(c)
+    - NIST-800-53-IA-7
+    - NIST-800-171-3.13.11
+    - PCI-DSS-Req-8.2.1
+    - CJIS-5.6.2.2
+    - DISA-STIG-RHEL-07-010210
+-   lineinfile:
+        dest: /etc/libuser.conf
+        insertafter: ^.default]
+        line: crypt_style = sha512
+        regexp: ^#?crypt_style
+        state: present
+    name: Set Password Hashing Algorithm in /etc/libuser.conf
     tags:
-    - ensure_gpgcheck_globally_activated
-    - high_severity
-    - unknown_strategy
+    - set_password_hashing_algorithm_libuserconf
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27053-8
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(c)
+    - NIST-800-53-IA-7
+    - NIST-800-171-3.13.11
+    - PCI-DSS-Req-8.2.1
+    - CJIS-5.6.2.2
+    - DISA-STIG-RHEL-07-010220
+-   name: XCCDF Value var_password_pam_ucredit
+    set_fact:
+        var_password_pam_ucredit: '-1'
+    tags:
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/security/pwquality.conf
+        line: ucredit = {{ var_password_pam_ucredit }}
+        regexp: ^#?\s*ucredit
+    name: Ensure PAM variable ucredit is set accordingly
+    tags:
+    - accounts_password_pam_ucredit
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27200-5
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(a)
+    - PCI-DSS-Req-8.2.3
+    - DISA-STIG-RHEL-07-010120
+-   name: XCCDF Value var_password_pam_minlen
+    set_fact:
+        var_password_pam_minlen: '7'
+    tags:
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/security/pwquality.conf
+        line: minlen = {{ var_password_pam_minlen }}
+        regexp: ^#?\s*minlen
+    name: Ensure PAM variable minlen is set accordingly
+    tags:
+    - accounts_password_pam_minlen
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27293-0
+    - NIST-800-53-IA-5(1)(a)
+    - PCI-DSS-Req-8.2.3
+    - CJIS-5.6.2.1.1
+    - DISA-STIG-RHEL-07-010280
+-   name: XCCDF Value var_password_pam_lcredit
+    set_fact:
+        var_password_pam_lcredit: '-1'
+    tags:
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/security/pwquality.conf
+        line: lcredit = {{ var_password_pam_lcredit }}
+        regexp: ^#?\s*lcredit
+    name: Ensure PAM variable lcredit is set accordingly
+    tags:
+    - accounts_password_pam_lcredit
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27345-8
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-IA-5(1)(a)
+    - PCI-DSS-Req-8.2.3
+    - DISA-STIG-RHEL-07-010130
+-   name: XCCDF Value var_password_pam_dcredit
+    set_fact:
+        var_password_pam_dcredit: '-1'
+    tags:
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/security/pwquality.conf
+        line: dcredit = {{ var_password_pam_dcredit }}
+        regexp: ^#?\s*dcredit
+    name: Ensure PAM variable dcredit is set accordingly
+    tags:
+    - accounts_password_pam_dcredit
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27214-6
+    - NIST-800-53-IA-5(1)(a)
+    - NIST-800-53-IA-5(b)
+    - NIST-800-53-IA-5(c)
+    - NIST-800-53-194
+    - PCI-DSS-Req-8.2.3
+    - DISA-STIG-RHEL-07-010140
+-   name: XCCDF Value var_accounts_passwords_pam_faillock_deny
+    set_fact:
+        var_accounts_passwords_pam_faillock_deny: '6'
+    tags:
+    - always
+-   name: XCCDF Value var_accounts_passwords_pam_faillock_unlock_time
+    set_fact:
+        var_accounts_passwords_pam_faillock_unlock_time: '1800'
+    tags:
+    - always
+-   name: XCCDF Value var_accounts_passwords_pam_faillock_fail_interval
+    set_fact:
+        var_accounts_passwords_pam_faillock_fail_interval: '900'
+    tags:
+    - always
+-   name: set auth pam_faillock before pam_unix.so
+    pamd:
+        control: sufficient
+        module_arguments: 'preauth silent deny: {{ var_accounts_passwords_pam_faillock_deny }} unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time
+            }} fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}'
+        module_path: pam_unix.so
+        name: system-auth
+        new_control: required
+        new_module_path: pam_faillock.so
+        new_type: auth
+        state: before
+        type: auth
+    tags:
+    - accounts_passwords_pam_faillock_deny
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27350-8
+    - NIST-800-53-AC-7(b)
+    - NIST-800-171-3.1.8
+    - PCI-DSS-Req-8.1.6
+    - CJIS-5.5.3
+    - DISA-STIG-RHEL-07-010320
+-   name: set auth pam_faillock after pam_unix.so
+    pamd:
+        control: sufficient
+        module_arguments: 'preauth silent deny: {{ var_accounts_passwords_pam_faillock_deny }} unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time
+            }} fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}'
+        module_path: pam_unix.so
+        name: system-auth
+        new_control: '[default=die]'
+        new_module_path: pam_faillock.so
+        new_type: auth
+        state: after
+        type: auth
+    tags:
+    - accounts_passwords_pam_faillock_deny
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27350-8
+    - NIST-800-53-AC-7(b)
+    - NIST-800-171-3.1.8
+    - PCI-DSS-Req-8.1.6
+    - CJIS-5.5.3
+    - DISA-STIG-RHEL-07-010320
+-   name: set account pam_faillock before pam_unix.so
+    pamd:
+        control: required
+        module_path: pam_unix.so
+        name: system-auth
+        new_control: required
+        new_module_path: pam_faillock.so
+        new_type: account
+        state: before
+        type: account
+    tags:
+    - accounts_passwords_pam_faillock_deny
+    - medium_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27350-8
+    - NIST-800-53-AC-7(b)
+    - NIST-800-171-3.1.8
+    - PCI-DSS-Req-8.1.6
+    - CJIS-5.5.3
+    - DISA-STIG-RHEL-07-010320
+-   name: XCCDF Value var_password_pam_unix_remember
+    set_fact:
+        var_password_pam_unix_remember: '4'
+    tags:
+    - always
+-   name: Do not allow users to reuse recent passwords - system-auth (change)
+    replace:
+        dest: /etc/pam.d/system-auth
+        follow: true
+        regexp: ^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$
+        replace: \g<1>{{ var_password_pam_unix_remember }}\g<3>
+    tags:
+    - accounts_password_pam_unix_remember
+    - medium_severity
+    - configure_strategy
     - low_complexity
     - medium_disruption
-    - CCE-26989-4
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-020050
-    when: ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or yum_config_file.stat.exists
-    with_items: /etc/yum.conf
--   ini_file:
-        create: false
-        dest: '{{item}}'
-        option: gpgcheck
-        section: main
-        value: 1
-    name: Ensure GPG check is globally activated (dnf)
+    - CCE-26923-3
+    - NIST-800-53-IA-5(f)
+    - NIST-800-53-IA-5(1)(e)
+    - NIST-800-171-3.5.8
+    - PCI-DSS-Req-8.2.5
+    - CJIS-5.6.2.1.1
+    - DISA-STIG-RHEL-07-010270
+-   name: Do not allow users to reuse recent passwords - system-auth (add)
+    replace:
+        dest: /etc/pam.d/system-auth
+        follow: true
+        regexp: ^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$
+        replace: \g<0> remember={{ var_password_pam_unix_remember }}
     tags:
-    - ensure_gpgcheck_globally_activated
-    - high_severity
-    - unknown_strategy
+    - accounts_password_pam_unix_remember
+    - medium_severity
+    - configure_strategy
     - low_complexity
     - medium_disruption
-    - CCE-26989-4
-    - NIST-800-53-CM-5(3)
-    - NIST-800-53-SI-7
-    - NIST-800-53-MA-1(b)
-    - NIST-800-171-3.4.8
-    - PCI-DSS-Req-6.2
-    - CJIS-5.10.4.1
-    - DISA-STIG-RHEL-07-020050
-    when: ansible_distribution == "Fedora"
-    with_items: /etc/dnf/dnf.conf
+    - CCE-26923-3
+    - NIST-800-53-IA-5(f)
+    - NIST-800-53-IA-5(1)(e)
+    - NIST-800-171-3.5.8
+    - PCI-DSS-Req-8.2.5
+    - CJIS-5.6.2.1.1
+    - DISA-STIG-RHEL-07-010270
+-   name: XCCDF Value sshd_idle_timeout_value
+    set_fact:
+        sshd_idle_timeout_value: '900'
+    tags:
+    - always
+-   lineinfile:
+        create: true
+        dest: /etc/ssh/sshd_config
+        line: ClientAliveInterval {{ sshd_idle_timeout_value }}
+        regexp: ^ClientAliveInterval
+        validate: sshd -t -f %s
+    name: Set SSH Idle Timeout Interval
+    tags:
+    - sshd_set_idle_timeout
+    - unknown_severity
+    - restrict_strategy
+    - low_complexity
+    - low_disruption
+    - CCE-27433-2
+    - NIST-800-53-AC-2(5)
+    - NIST-800-53-SA-8(i)
+    - NIST-800-53-AC-12
+    - NIST-800-171-3.1.11
+    - PCI-DSS-Req-8.1.8
+    - CJIS-5.5.6
+    - DISA-STIG-RHEL-07-040320
