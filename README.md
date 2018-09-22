@@ -1,7 +1,7 @@
 # PCI-DSS v3 Control Baseline for Red Hat Enterprise Linux 7
 
 [![Build Status](https://travis-ci.org/RedHatOfficial/ansible-rhel7-pci-dss-role.svg?branch=master)](https://travis-ci.org/RedHatOfficial/ansible-rhel7-pci-dss-role)
-[![Ansible Role](https://img.shields.io/ansible/role/26067.svg)](https://galaxy.ansible.com/RedHatOfficial/rhel7-pci-dss-role)
+[![Ansible Role](https://img.shields.io/ansible/role/26067.svg)](https://galaxy.ansible.com/RedHatOfficial/rhel7_pci_dss)
 [![GitHub release](https://img.shields.io/github/release/RedHatOfficial/ansible-rhel7-pci-dss-role.svg)](https://github.com/RedHatOfficial/ansible-rhel7-pci-dss-role/releases/latest)
 
 Ansible remediation role for profile pci-dss  
@@ -37,13 +37,13 @@ N/A
 
 # Example Playbook
 
-Run `ansible-galaxy install RedHatOfficial.rhel7-role-pci-dss` to
+Run `ansible-galaxy install RedHatOfficial.rhel7_pci_dss` to
 download and install the role. Then you can use the following playbook snippet.
 
 
     - hosts: all
       roles:
-         - { role: RedHatOfficial.rhel7-role-pci-dss }
+         - { role: RedHatOfficial.rhel7_pci_dss }
 
 
 Then first check the playbook using (on the localhost):
