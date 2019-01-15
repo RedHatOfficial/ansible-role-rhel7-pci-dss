@@ -20,10 +20,10 @@ galaxy_info:
   - hardening
   - openscap
   - ssg
-  - scap-security-guide
+  - scap
   - security
   - compliance
-  - pci_dss
+  - complianceascode
   - pcidss
   - redhatofficial
   - redhat
