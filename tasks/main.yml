@@ -34,6 +34,7 @@
   - NIST-800-53-SA-8(i)
   - NIST-800-53-AC-12
   - NIST-800-53-AC-17(b)
+  - NIST-800-53-SC-10
   - NIST-800-171-3.1.11
   - PCI-DSS-Req-8.1.8
   - CJIS-5.5.6
@@ -633,6 +634,7 @@
     executable: /bin/bash
   register: files_with_incorrect_hash
   changed_when: false
+  failed_when: files_with_incorrect_hash.rc > 1
   when:
   - (package_manager_reinstall_cmd is defined)
   - high_complexity | bool
@@ -699,7 +701,7 @@
     warn: false
     executable: /bin/bash
   register: files_with_incorrect_permissions
-  failed_when: false
+  failed_when: files_with_incorrect_permissions.rc > 1
   changed_when: false
   check_mode: false
   tags:
@@ -1490,6 +1492,7 @@
     regexp: ^\s*max_log_file\s*=\s*.*$
     line: max_log_file = {{ var_auditd_max_log_file }}
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1518,6 +1521,7 @@
     line: num_logs = {{ var_auditd_num_logs }}
     regexp: ^\s*num_logs\s*=\s*.*$
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1546,6 +1550,7 @@
     dest: /etc/audisp/plugins.d/syslog.conf
     regexp: ^active
     line: active = yes
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - auditd_audispd_syslog_plugin_activated | bool
@@ -1574,6 +1579,7 @@
     dest: /etc/audit/auditd.conf
     line: action_mail_acct = {{ var_auditd_action_mail_acct }}
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1606,6 +1612,7 @@
     line: admin_space_left_action = {{ var_auditd_admin_space_left_action }}
     regexp: ^\s*admin_space_left_action\s*=\s*.*$
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1637,6 +1644,7 @@
     line: space_left_action = {{ var_auditd_space_left_action }}
     regexp: ^\s*space_left_action\s*=\s*.*$
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1669,6 +1677,7 @@
     line: max_log_file_action = {{ var_auditd_max_log_file_action }}
     regexp: ^\s*max_log_file_action\s*=\s*.*$
     state: present
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -1902,6 +1911,7 @@
     line: -a always,exit -F arch=b32 -S fremovexattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -2177,6 +2187,7 @@
     line: -a always,exit -F arch=b32 -S fchmod -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -2452,6 +2463,7 @@
     line: -a always,exit -F arch=b32 -S fsetxattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_fsetxattr | bool
@@ -2727,6 +2739,7 @@
     line: -a always,exit -F arch=b32 -S fchown -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_fchown | bool
@@ -3002,6 +3015,7 @@
     line: -a always,exit -F arch=b32 -S fchownat -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_fchownat | bool
@@ -3277,6 +3291,7 @@
     line: -a always,exit -F arch=b32 -S chmod -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -3552,6 +3567,7 @@
     line: -a always,exit -F arch=b32 -S lremovexattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -3827,6 +3843,7 @@
     line: -a always,exit -F arch=b32 -S fchmodat -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -4102,6 +4119,7 @@
     line: -a always,exit -F arch=b32 -S lchown -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -4377,6 +4395,7 @@
     line: -a always,exit -F arch=b32 -S chown -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_chown | bool
@@ -4652,6 +4671,7 @@
     line: -a always,exit -F arch=b32 -S lsetxattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_lsetxattr | bool
@@ -4927,6 +4947,7 @@
     line: -a always,exit -F arch=b32 -S setxattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - audit_rules_dac_modification_setxattr | bool
@@ -5202,6 +5223,7 @@
     line: -a always,exit -F arch=b32 -S removexattr -F auid>=1000 -F auid!=unset -F key=perm_mod
     state: present
     dest: /etc/audit/audit.rules
+    create: true
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - restrict_strategy | bool
@@ -5603,10 +5625,17 @@
   - CJIS-5.4.1.1
 
 - name: Enable service auditd
-  service:
-    name: auditd
-    enabled: 'yes'
-    state: started
+  block:
+  - name: Gather the package facts
+    package_facts:
+      manager: auto
+  - name: Enable service auditd
+    service:
+      name: auditd
+      enabled: 'yes'
+      state: started
+    when:
+    - '"audit" in ansible_facts.packages'
   when:
   - ansible_virtualization_role != "guest" or ansible_virtualization_type != "docker"
   - no_reboot_needed | bool
@@ -5753,6 +5782,7 @@
     regexp: ^#?ENCRYPT_METHOD
     line: ENCRYPT_METHOD SHA512
     state: present
+    create: true
   tags:
   - set_password_hashing_algorithm_logindefs
   - medium_severity
@@ -5784,6 +5814,7 @@
     regexp: ^#?crypt_style
     line: crypt_style = sha512
     state: present
+    create: true
   tags:
   - set_password_hashing_algorithm_libuserconf
   - medium_severity
