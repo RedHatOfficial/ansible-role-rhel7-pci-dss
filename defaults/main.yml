@@ -1,6 +1,23 @@
 ---
 # defaults file for rhel7_pci_dss
 
+inactivity_timeout_value: true
+sshd_idle_timeout_value: true
+var_account_disable_post_pw_expiration: true
+var_accounts_maximum_age_login_defs: true
+var_accounts_passwords_pam_faillock_deny: true
+var_accounts_passwords_pam_faillock_unlock_time: true
+var_auditd_action_mail_acct: true
+var_auditd_admin_space_left_action: true
+var_auditd_max_log_file: true
+var_auditd_max_log_file_action: true
+var_auditd_num_logs: true
+var_auditd_space_left_action: true
+var_password_pam_dcredit: true
+var_password_pam_lcredit: true
+var_password_pam_minlen: true
+var_password_pam_ucredit: true
+var_password_pam_unix_remember: true
 account_disable_post_pw_expiration: true
 accounts_maximum_age_login_defs: true
 accounts_password_pam_dcredit: true
@@ -26,6 +43,7 @@ audit_rules_dac_modification_lsetxattr: true
 audit_rules_dac_modification_removexattr: true
 audit_rules_dac_modification_setxattr: true
 audit_rules_privileged_commands: true
+auditd_audispd_syslog_plugin_activated: true
 auditd_data_retention_action_mail_acct: true
 auditd_data_retention_admin_space_left_action: true
 auditd_data_retention_max_log_file: true
@@ -37,7 +55,6 @@ dconf_gnome_screensaver_idle_activation_enabled: true
 dconf_gnome_screensaver_idle_delay: true
 dconf_gnome_screensaver_lock_enabled: true
 dconf_gnome_screensaver_mode_blank: true
-dconf_use_text_backend: true
 disable_prelink: true
 enable_strategy: true
 ensure_gpgcheck_globally_activated: true
@@ -54,6 +71,7 @@ file_owner_grub2_cfg: true
 file_permissions_etc_group: true
 file_permissions_etc_passwd: true
 file_permissions_etc_shadow: true
+grub2_audit_argument: true
 high_complexity: true
 high_disruption: true
 high_severity: true
