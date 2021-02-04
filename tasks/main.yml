@@ -175,7 +175,6 @@
 - name: Do not allow users to reuse recent passwords - system-auth (change)
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     regexp: ^(password\s+sufficient\s+pam_unix\.so\s.*remember\s*=\s*)(\S+)(.*)$
     replace: \g<1>{{ var_password_pam_unix_remember }}\g<3>
   tags:
@@ -203,7 +202,6 @@
 - name: Do not allow users to reuse recent passwords - system-auth (add)
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     regexp: ^password\s+sufficient\s+pam_unix\.so\s(?!.*remember\s*=\s*).*$
     replace: \g<0> remember={{ var_password_pam_unix_remember }}
   tags:
@@ -636,7 +634,6 @@
 - name: Prevent Log In to Accounts With Empty Password - system-auth
   replace:
     dest: /etc/pam.d/system-auth
-    follow: true
     regexp: nullok
   tags:
   - CCE-27286-4
@@ -665,7 +662,6 @@
 - name: Prevent Log In to Accounts With Empty Password - password-auth
   replace:
     dest: /etc/pam.d/password-auth
-    follow: true
     regexp: nullok
   tags:
   - CCE-27286-4
