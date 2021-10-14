@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: redhatofficial.rhel7-pci-dss
