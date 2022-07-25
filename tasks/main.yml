@@ -764,36 +764,6 @@
   - no_reboot_needed
   - unknown_strategy
 
-- name: Prevent user modification of GNOME idle-delay
-  lineinfile:
-    path: /etc/dconf/db/local.d/locks/00-security-settings-lock
-    regexp: ^/org/gnome/desktop/session/idle-delay$
-    line: /org/gnome/desktop/session/idle-delay
-    create: true
-  when:
-  - dconf_gnome_screensaver_idle_delay | bool
-  - low_complexity | bool
-  - medium_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-  - '"gdm" in ansible_facts.packages'
-  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
-  tags:
-  - CCE-80110-0
-  - CJIS-5.5.5
-  - DISA-STIG-RHEL-07-010070
-  - NIST-800-171-3.1.10
-  - NIST-800-53-AC-11(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.8
-  - dconf_gnome_screensaver_idle_delay
-  - low_complexity
-  - medium_disruption
-  - medium_severity
-  - no_reboot_needed
-  - unknown_strategy
-
 - name: Dconf Update
   command: dconf update
   when:
@@ -13162,6 +13132,7 @@
   tags:
   - CCE-27444-9
   - NIST-800-171-3.3.7
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.4.1
@@ -13193,6 +13164,7 @@
   tags:
   - CCE-27444-9
   - NIST-800-171-3.3.7
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.4.1
@@ -13222,6 +13194,7 @@
   tags:
   - CCE-27444-9
   - NIST-800-171-3.3.7
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.4.1
@@ -13251,6 +13224,7 @@
   tags:
   - CCE-27444-9
   - NIST-800-171-3.3.7
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.4.1
@@ -13276,6 +13250,7 @@
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   tags:
   - CCE-27012-4
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-AU-8(2)
   - NIST-800-53-CM-6(a)
@@ -13305,6 +13280,7 @@
   - chrony_server_config.matched == 1
   tags:
   - CCE-27012-4
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-AU-8(2)
   - NIST-800-53-CM-6(a)
@@ -13331,6 +13307,7 @@
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   tags:
   - CCE-27012-4
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-AU-8(2)
   - NIST-800-53-CM-6(a)
@@ -13360,6 +13337,7 @@
   - ntp_server_config.matched == 1
   tags:
   - CCE-27012-4
+  - NIST-800-53-AU-12(1)
   - NIST-800-53-AU-8(1)(a)
   - NIST-800-53-AU-8(2)
   - NIST-800-53-CM-6(a)
