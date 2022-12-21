@@ -93,7 +93,39 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - rpm_verify_hashes | bool
-  - (ansible_distribution == "RedHat" or ansible_distribution == "OracleLinux")
+  - (ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "OracleLinux")
+  tags:
+  - CCE-27157-7
+  - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010020
+  - NIST-800-171-3.3.8
+  - NIST-800-171-3.4.1
+  - NIST-800-53-AU-9(3)
+  - NIST-800-53-CM-6(c)
+  - NIST-800-53-CM-6(d)
+  - NIST-800-53-SI-7
+  - NIST-800-53-SI-7(1)
+  - NIST-800-53-SI-7(6)
+  - PCI-DSS-Req-11.5
+  - high_complexity
+  - high_severity
+  - medium_disruption
+  - no_reboot_needed
+  - restrict_strategy
+  - rpm_verify_hashes
+
+- name: 'Set fact: Package manager reinstall command (zypper)'
+  set_fact:
+    package_manager_reinstall_cmd: zypper in -f -y
+  when:
+  - DISA_STIG_RHEL_07_010020 | bool
+  - high_complexity | bool
+  - high_severity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - rpm_verify_hashes | bool
+  - ansible_distribution == "SLES"
   tags:
   - CCE-27157-7
   - CJIS-5.10.4.1
@@ -116,8 +148,6 @@
 
 - name: Read files with incorrect hash
   command: rpm -Va --nodeps --nosize --nomtime --nordev --nocaps --nolinkto --nouser --nogroup --nomode --noghost --noconfig
-  args:
-    warn: false
   register: files_with_incorrect_hash
   changed_when: false
   failed_when: files_with_incorrect_hash.rc > 1
@@ -153,8 +183,6 @@
 
 - name: Create list of packages
   command: rpm -qf "{{ item }}"
-  args:
-    warn: false
   with_items: '{{ files_with_incorrect_hash.stdout_lines | map(''regex_findall'', ''^[.]+[5]+.* (\/.*)'', ''\1'') | map(''join'')
     | select(''match'', ''(\/.*)'') | list | unique }}'
   register: list_of_packages
@@ -192,8 +220,6 @@
 
 - name: Reinstall packages of files with incorrect hash
   command: '{{ package_manager_reinstall_cmd }} ''{{ item }}'''
-  args:
-    warn: false
   with_items: '{{ list_of_packages.results | map(attribute=''stdout_lines'') | list | unique }}'
   when:
   - DISA_STIG_RHEL_07_010020 | bool
@@ -227,8 +253,6 @@
 
 - name: Read list of files with incorrect permissions
   command: rpm -Va --nodeps --nosignature --nofiledigest --nosize --nomtime --nordev --nocaps --nolinkto --nouser --nogroup
-  args:
-    warn: false
   register: files_with_incorrect_permissions
   failed_when: files_with_incorrect_permissions.rc > 1
   changed_when: false
@@ -264,8 +288,6 @@
 
 - name: Create list of packages
   command: rpm -qf "{{ item }}"
-  args:
-    warn: false
   with_items: '{{ files_with_incorrect_permissions.stdout_lines | map(''regex_findall'', ''^[.]+[M]+.* (\/.*)'', ''\1'') |
     map(''join'') | select(''match'', ''(\/.*)'') | list | unique }}'
   register: list_of_packages
@@ -303,8 +325,6 @@
 
 - name: Correct file permissions with RPM
   command: rpm --setperms '{{ item }}'
-  args:
-    warn: false
   with_items: '{{ list_of_packages.results | map(attribute=''stdout_lines'') | list | unique }}'
   when:
   - DISA_STIG_RHEL_07_010010 | bool
@@ -1361,8 +1381,6 @@
 
 - name: Read signatures in GPG key
   command: gpg --with-fingerprint --with-colons "/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release"
-  args:
-    warn: false
   changed_when: false
   register: gpg_fingerprints
   check_mode: false
@@ -1514,8 +1532,8 @@
   - CCE-27275-7
   - CJIS-5.5.2
   - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
   - NIST-800-53-AC-9(1)
-  - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.2.4
   - configure_strategy
   - display_login_attempts
@@ -1549,8 +1567,8 @@
   - CCE-27275-7
   - CJIS-5.5.2
   - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
   - NIST-800-53-AC-9(1)
-  - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.2.4
   - configure_strategy
   - display_login_attempts
@@ -1763,8 +1781,8 @@
   - CCE-27275-7
   - CJIS-5.5.2
   - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
   - NIST-800-53-AC-9(1)
-  - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.2.4
   - configure_strategy
   - display_login_attempts
@@ -1790,8 +1808,8 @@
   - CCE-27275-7
   - CJIS-5.5.2
   - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
   - NIST-800-53-AC-9(1)
-  - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.2.4
   - configure_strategy
   - display_login_attempts
@@ -1942,8 +1960,8 @@
   - CCE-27275-7
   - CJIS-5.5.2
   - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
   - NIST-800-53-AC-9(1)
-  - NIST-800-53-CM-6(a)
   - PCI-DSS-Req-10.2.4
   - configure_strategy
   - display_login_attempts
@@ -4655,15 +4673,15 @@
   - PCI-DSS-Req-10.3
   - grub2_audit_argument
   - low_disruption
+  - low_severity
   - medium_complexity
-  - medium_severity
   - reboot_required
   - restrict_strategy
   when:
   - grub2_audit_argument | bool
   - low_disruption | bool
+  - low_severity | bool
   - medium_complexity | bool
-  - medium_severity | bool
   - reboot_required | bool
   - restrict_strategy | bool
 
@@ -4674,8 +4692,8 @@
   when:
   - grub2_audit_argument | bool
   - low_disruption | bool
+  - low_severity | bool
   - medium_complexity | bool
-  - medium_severity | bool
   - reboot_required | bool
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
@@ -4692,8 +4710,8 @@
   - PCI-DSS-Req-10.3
   - grub2_audit_argument
   - low_disruption
+  - low_severity
   - medium_complexity
-  - medium_severity
   - reboot_required
   - restrict_strategy
 
@@ -4705,8 +4723,8 @@
   when:
   - grub2_audit_argument | bool
   - low_disruption | bool
+  - low_severity | bool
   - medium_complexity | bool
-  - medium_severity | bool
   - reboot_required | bool
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
@@ -4724,8 +4742,8 @@
   - PCI-DSS-Req-10.3
   - grub2_audit_argument
   - low_disruption
+  - low_severity
   - medium_complexity
-  - medium_severity
   - reboot_required
   - restrict_strategy
 
@@ -4737,8 +4755,8 @@
   when:
   - grub2_audit_argument | bool
   - low_disruption | bool
+  - low_severity | bool
   - medium_complexity | bool
-  - medium_severity | bool
   - reboot_required | bool
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
@@ -4756,8 +4774,8 @@
   - PCI-DSS-Req-10.3
   - grub2_audit_argument
   - low_disruption
+  - low_severity
   - medium_complexity
-  - medium_severity
   - reboot_required
   - restrict_strategy
 
@@ -4766,8 +4784,8 @@
   when:
   - grub2_audit_argument | bool
   - low_disruption | bool
+  - low_severity | bool
   - medium_complexity | bool
-  - medium_severity | bool
   - reboot_required | bool
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
@@ -4784,8 +4802,8 @@
   - PCI-DSS-Req-10.3
   - grub2_audit_argument
   - low_disruption
+  - low_severity
   - medium_complexity
-  - medium_severity
   - reboot_required
   - restrict_strategy
 
@@ -5175,7 +5193,7 @@
 
 - name: Set architecture for audit mount tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030740 | bool
   - audit_rules_media_export | bool
@@ -5186,6 +5204,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27447-2
   - CJIS-5.4.1.1
@@ -5203,7 +5223,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for mount for x86 platform
+- name: Perform remediation of Audit rules for mount for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -5319,7 +5339,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for mount for x86_64 platform
+- name: Perform remediation of Audit rules for mount for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -5464,7 +5484,7 @@
 
 - name: Set architecture for audit tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - audit_rules_networkconfig_modification | bool
   - low_complexity | bool
@@ -5474,6 +5494,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27076-9
   - CJIS-5.4.1.1
@@ -5490,7 +5512,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Remediate audit rules for network configuration for x86
+- name: Remediate audit rules for network configuration for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -5610,7 +5632,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Remediate audit rules for network configuration for x86_64
+- name: Remediate audit rules for network configuration for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -7839,7 +7861,7 @@
 
 - name: Set architecture for audit chmod tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030410 | bool
   - audit_rules_dac_modification_chmod | bool
@@ -7850,6 +7872,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27339-1
   - CJIS-5.4.1.1
@@ -7866,7 +7890,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for chmod for x86 platform
+- name: Perform remediation of Audit rules for chmod for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -7987,7 +8011,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for chmod for x86_64 platform
+- name: Perform remediation of Audit rules for chmod for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8138,7 +8162,7 @@
 
 - name: Set architecture for audit chown tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030370 | bool
   - audit_rules_dac_modification_chown | bool
@@ -8149,6 +8173,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27364-9
   - CJIS-5.4.1.1
@@ -8165,7 +8191,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for chown for x86 platform
+- name: Perform remediation of Audit rules for chown for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8288,7 +8314,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for chown for x86_64 platform
+- name: Perform remediation of Audit rules for chown for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8441,7 +8467,7 @@
 
 - name: Set architecture for audit fchmod tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030410 | bool
   - audit_rules_dac_modification_fchmod | bool
@@ -8452,6 +8478,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27393-8
   - CJIS-5.4.1.1
@@ -8468,7 +8496,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchmod for x86 platform
+- name: Perform remediation of Audit rules for fchmod for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8589,7 +8617,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchmod for x86_64 platform
+- name: Perform remediation of Audit rules for fchmod for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8740,7 +8768,7 @@
 
 - name: Set architecture for audit fchmodat tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030410 | bool
   - audit_rules_dac_modification_fchmodat | bool
@@ -8751,6 +8779,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27388-8
   - CJIS-5.4.1.1
@@ -8767,7 +8797,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchmodat for x86 platform
+- name: Perform remediation of Audit rules for fchmodat for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -8888,7 +8918,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchmodat for x86_64 platform
+- name: Perform remediation of Audit rules for fchmodat for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9039,7 +9069,7 @@
 
 - name: Set architecture for audit fchown tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030370 | bool
   - audit_rules_dac_modification_fchown | bool
@@ -9050,6 +9080,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27356-5
   - CJIS-5.4.1.1
@@ -9066,7 +9098,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchown for x86 platform
+- name: Perform remediation of Audit rules for fchown for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9189,7 +9221,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchown for x86_64 platform
+- name: Perform remediation of Audit rules for fchown for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9342,7 +9374,7 @@
 
 - name: Set architecture for audit fchownat tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030370 | bool
   - audit_rules_dac_modification_fchownat | bool
@@ -9353,6 +9385,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27387-0
   - CJIS-5.4.1.1
@@ -9369,7 +9403,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchownat for x86 platform
+- name: Perform remediation of Audit rules for fchownat for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9492,7 +9526,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fchownat for x86_64 platform
+- name: Perform remediation of Audit rules for fchownat for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9645,7 +9679,7 @@
 
 - name: Set architecture for audit fremovexattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_fremovexattr | bool
@@ -9656,6 +9690,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27353-2
   - CJIS-5.4.1.1
@@ -9672,7 +9708,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fremovexattr for x86 platform
+- name: Perform remediation of Audit rules for fremovexattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9799,7 +9835,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fremovexattr for x86_64 platform
+- name: Perform remediation of Audit rules for fremovexattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -9956,7 +9992,7 @@
 
 - name: Set architecture for audit fsetxattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_fsetxattr | bool
@@ -9967,6 +10003,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27389-6
   - CJIS-5.4.1.1
@@ -9983,7 +10021,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fsetxattr for x86 platform
+- name: Perform remediation of Audit rules for fsetxattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10110,7 +10148,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for fsetxattr for x86_64 platform
+- name: Perform remediation of Audit rules for fsetxattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10267,7 +10305,7 @@
 
 - name: Set architecture for audit lchown tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030370 | bool
   - audit_rules_dac_modification_lchown | bool
@@ -10278,6 +10316,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27083-5
   - CJIS-5.4.1.1
@@ -10294,7 +10334,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lchown for x86 platform
+- name: Perform remediation of Audit rules for lchown for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10417,7 +10457,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lchown for x86_64 platform
+- name: Perform remediation of Audit rules for lchown for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10570,7 +10610,7 @@
 
 - name: Set architecture for audit lremovexattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_lremovexattr | bool
@@ -10581,6 +10621,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27410-0
   - CJIS-5.4.1.1
@@ -10597,7 +10639,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lremovexattr for x86 platform
+- name: Perform remediation of Audit rules for lremovexattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10724,7 +10766,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lremovexattr for x86_64 platform
+- name: Perform remediation of Audit rules for lremovexattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -10881,7 +10923,7 @@
 
 - name: Set architecture for audit lsetxattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_lsetxattr | bool
@@ -10892,6 +10934,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27280-7
   - CJIS-5.4.1.1
@@ -10908,7 +10952,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lsetxattr for x86 platform
+- name: Perform remediation of Audit rules for lsetxattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11035,7 +11079,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for lsetxattr for x86_64 platform
+- name: Perform remediation of Audit rules for lsetxattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11192,7 +11236,7 @@
 
 - name: Set architecture for audit removexattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_removexattr | bool
@@ -11203,6 +11247,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27367-2
   - CJIS-5.4.1.1
@@ -11219,7 +11265,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for removexattr for x86 platform
+- name: Perform remediation of Audit rules for removexattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11346,7 +11392,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for removexattr for x86_64 platform
+- name: Perform remediation of Audit rules for removexattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11503,7 +11549,7 @@
 
 - name: Set architecture for audit setxattr tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - DISA_STIG_RHEL_07_030440 | bool
   - audit_rules_dac_modification_setxattr | bool
@@ -11514,6 +11560,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27213-8
   - CJIS-5.4.1.1
@@ -11530,7 +11578,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for setxattr for x86 platform
+- name: Perform remediation of Audit rules for setxattr for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11657,7 +11705,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for setxattr for x86_64 platform
+- name: Perform remediation of Audit rules for setxattr for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11813,7 +11861,7 @@
 
 - name: Set architecture for audit tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - audit_rules_kernel_module_loading | bool
   - low_complexity | bool
@@ -11823,6 +11871,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27129-6
   - CJIS-5.4.1.1
@@ -11839,7 +11889,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for kernel module loading for x86 platform
+- name: Perform remediation of Audit rules for kernel module loading for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -11963,7 +12013,7 @@
   - reboot_required
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for kernel module loading for x86_64 platform
+- name: Perform remediation of Audit rules for kernel module loading for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -12125,7 +12175,6 @@
 
     '
   args:
-    warn: false
     executable: /bin/bash
   check_mode: false
   register: find_result
@@ -12323,7 +12372,7 @@
 
 - name: Set architecture for audit tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - audit_rules_time_adjtimex | bool
   - low_complexity | bool
@@ -12333,6 +12382,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27290-6
   - CJIS-5.4.1.1
@@ -12349,7 +12400,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for adjtimex for x86 platform
+- name: Perform remediation of Audit rules for adjtimex for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -12469,7 +12520,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for adjtimex for x86_64 platform
+- name: Perform remediation of Audit rules for adjtimex for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -12617,7 +12668,7 @@
 
 - name: Set architecture for audit tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - audit_rules_time_clock_settime | bool
   - low_complexity | bool
@@ -12627,6 +12678,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27219-5
   - CJIS-5.4.1.1
@@ -12643,7 +12696,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for clock_settime for x86 platform
+- name: Perform remediation of Audit rules for clock_settime for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -12757,7 +12810,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for clock_settime for x86_64 platform
+- name: Perform remediation of Audit rules for clock_settime for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -12900,7 +12953,7 @@
 
 - name: Set architecture for audit tasks
   set_fact:
-    audit_arch: b{{ ansible_architecture | regex_replace('.*(\d\d$)','\1') }}
+    audit_arch: b64
   when:
   - audit_rules_time_settimeofday | bool
   - low_complexity | bool
@@ -12910,6 +12963,8 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
+    == "s390x" or ansible_architecture == "x86_64"
   tags:
   - CCE-27216-1
   - CJIS-5.4.1.1
@@ -12926,7 +12981,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for settimeofday for x86 platform
+- name: Perform remediation of Audit rules for settimeofday for 32bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -13046,7 +13101,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Perform remediation of Audit rules for settimeofday for x86_64 platform
+- name: Perform remediation of Audit rules for settimeofday for 64bit platform
   block:
   - name: Declare list of syscalls
     set_fact:
@@ -13997,8 +14052,8 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
-  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - '"grub2-common" in ansible_facts.packages'
+  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   tags:
   - CCE-82023-3
@@ -14025,8 +14080,8 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
-  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - '"grub2-common" in ansible_facts.packages'
+  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - file_exists.stat is defined and file_exists.stat.exists
   tags:
@@ -14078,8 +14133,8 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
-  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - '"grub2-common" in ansible_facts.packages'
+  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   tags:
   - CCE-82026-6
@@ -14106,8 +14161,8 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
-  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - '"grub2-common" in ansible_facts.packages'
+  - '"/boot/efi" not in ansible_mounts | map(attribute="mount") | list'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - file_exists.stat is defined and file_exists.stat.exists
   tags:
@@ -15142,7 +15197,7 @@
   - restrict_strategy
   - sshd_set_keepalive_0
 
-- name: Set SSH Idle Timeout Interval
+- name: Set SSH Client Alive Interval
   block:
   - name: Check for duplicate values
     lineinfile:
