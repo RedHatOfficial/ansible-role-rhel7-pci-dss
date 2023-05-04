@@ -139,6 +139,8 @@ reboot_required: true
 restrict_strategy: true
 rpm_verify_hashes: true
 rpm_verify_permissions: true
+rsyslog_files_groupownership: true
+rsyslog_files_ownership: true
 rsyslog_files_permissions: true
 security_patches_up_to_date: true
 service_auditd_enabled: true
