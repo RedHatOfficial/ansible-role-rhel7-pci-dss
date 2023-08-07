@@ -508,10 +508,10 @@
 
 - name: Ensure AIDE is installed
   package:
-    name:
-    - aide
-    - crontabs
+    name: '{{ item }}'
     state: present
+  with_items:
+  - aide
   when:
   - DISA_STIG_RHEL_07_020030 | bool
   - aide_periodic_cron_checking | bool
@@ -656,6 +656,50 @@
   - medium_severity
   - no_reboot_needed
   - restrict_strategy
+
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
+  - CCE-81004-4
+  - PCI-DSS-Req-6.2
+  - PCI-DSSv4-6.3.3
+  - dconf_db_up_to_date
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
+  when:
+  - dconf_db_up_to_date | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+
+- name: Run dconf update
+  ansible.builtin.command:
+    cmd: dconf update
+  when:
+  - dconf_db_up_to_date | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+  - '"gdm" in ansible_facts.packages'
+  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  tags:
+  - CCE-81004-4
+  - PCI-DSS-Req-6.2
+  - PCI-DSSv4-6.3.3
+  - dconf_db_up_to_date
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
 
 - name: Gather the package facts
   package_facts:
@@ -1411,6 +1455,7 @@
   tags:
   - CCE-26957-1
   - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010019
   - NIST-800-171-3.4.8
   - NIST-800-53-CM-5(3)
   - NIST-800-53-CM-6(a)
@@ -1425,6 +1470,7 @@
   - no_reboot_needed
   - restrict_strategy
   when:
+  - DISA_STIG_RHEL_07_010019 | bool
   - ensure_redhat_gpgkey_installed | bool
   - high_severity | bool
   - medium_complexity | bool
@@ -1440,6 +1486,7 @@
   tags:
   - CCE-26957-1
   - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010019
   - NIST-800-171-3.4.8
   - NIST-800-53-CM-5(3)
   - NIST-800-53-CM-6(a)
@@ -1454,6 +1501,7 @@
   - no_reboot_needed
   - restrict_strategy
   when:
+  - DISA_STIG_RHEL_07_010019 | bool
   - ensure_redhat_gpgkey_installed | bool
   - high_severity | bool
   - medium_complexity | bool
@@ -1469,6 +1517,7 @@
   tags:
   - CCE-26957-1
   - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010019
   - NIST-800-171-3.4.8
   - NIST-800-53-CM-5(3)
   - NIST-800-53-CM-6(a)
@@ -1483,6 +1532,7 @@
   - no_reboot_needed
   - restrict_strategy
   when:
+  - DISA_STIG_RHEL_07_010019 | bool
   - ensure_redhat_gpgkey_installed | bool
   - high_severity | bool
   - medium_complexity | bool
@@ -1496,6 +1546,7 @@
   tags:
   - CCE-26957-1
   - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010019
   - NIST-800-171-3.4.8
   - NIST-800-53-CM-5(3)
   - NIST-800-53-CM-6(a)
@@ -1510,6 +1561,7 @@
   - no_reboot_needed
   - restrict_strategy
   when:
+  - DISA_STIG_RHEL_07_010019 | bool
   - ensure_redhat_gpgkey_installed | bool
   - high_severity | bool
   - medium_complexity | bool
@@ -1522,6 +1574,7 @@
     state: present
     key: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
   when:
+  - DISA_STIG_RHEL_07_010019 | bool
   - ensure_redhat_gpgkey_installed | bool
   - high_severity | bool
   - medium_complexity | bool
@@ -1535,6 +1588,7 @@
   tags:
   - CCE-26957-1
   - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-07-010019
   - NIST-800-171-3.4.8
   - NIST-800-53-CM-5(3)
   - NIST-800-53-CM-6(a)
