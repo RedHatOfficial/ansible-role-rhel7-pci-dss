@@ -394,8 +394,8 @@
   - no_reboot_needed
   - package_aide_installed
 
-- name: Ensure AIDE is installed
-  package:
+- name: Build and Test AIDE Database - Ensure AIDE Is Installed
+  ansible.builtin.package:
     name: '{{ item }}'
     state: present
   with_items:
@@ -423,8 +423,8 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Build and Test AIDE Database
-  command: /usr/sbin/aide --init
+- name: Build and Test AIDE Database - Build and Test AIDE Database
+  ansible.builtin.command: /usr/sbin/aide --init
   changed_when: true
   when:
   - DISA_STIG_RHEL_07_020029 | bool
@@ -449,8 +449,8 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check whether the stock AIDE Database exists
-  stat:
+- name: Build and Test AIDE Database - Check Whether the Stock AIDE Database Exists
+  ansible.builtin.stat:
     path: /var/lib/aide/aide.db.new.gz
   register: aide_database_stat
   when:
@@ -476,8 +476,8 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Stage AIDE Database
-  copy:
+- name: Build and Test AIDE Database - Stage AIDE Database
+  ansible.builtin.copy:
     src: /var/lib/aide/aide.db.new.gz
     dest: /var/lib/aide/aide.db.gz
     backup: true
@@ -1659,10 +1659,10 @@
   - low_severity | bool
   - no_reboot_needed | bool
 
-- name: Ensure PAM Displays Last Logon/Access Notification - Check if /etc/pam.d/postlogin file is present
+- name: Ensure PAM Displays Last Logon/Access Notification - Check if system relies on authselect tool
   ansible.builtin.stat:
-    path: /etc/pam.d/postlogin
-  register: result_pam_file_present
+    path: /usr/bin/authselect
+  register: result_authselect_present
   when:
   - DISA_STIG_RHEL_07_040530 | bool
   - configure_strategy | bool
@@ -1687,7 +1687,105 @@
   - low_severity
   - no_reboot_needed
 
-- name: Ensure PAM Displays Last Logon/Access Notification - Check the proper remediation for the system
+- name: Ensure PAM Displays Last Logon/Access Notification - Collect the Available authselect Features
+  ansible.builtin.command:
+    cmd: authselect list-features minimal
+  register: result_authselect_available_features
+  changed_when: false
+  when:
+  - DISA_STIG_RHEL_07_040530 | bool
+  - configure_strategy | bool
+  - display_login_attempts | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - low_severity | bool
+  - no_reboot_needed | bool
+  - '"pam" in ansible_facts.packages'
+  - result_authselect_present.stat.exists
+  tags:
+  - CCE-27275-7
+  - CJIS-5.5.2
+  - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
+  - NIST-800-53-AC-9(1)
+  - PCI-DSS-Req-10.2.4
+  - PCI-DSSv4-10.2.1.4
+  - configure_strategy
+  - display_login_attempts
+  - low_complexity
+  - low_disruption
+  - low_severity
+  - no_reboot_needed
+
+- name: Ensure PAM Displays Last Logon/Access Notification - Configure pam_lastlog.so Using authselect Feature
+  block:
+  - name: Ensure PAM Displays Last Logon/Access Notification - Check integrity of authselect current profile
+    ansible.builtin.command:
+      cmd: authselect check
+    register: result_authselect_check_cmd
+    changed_when: false
+    failed_when: false
+  - name: Ensure PAM Displays Last Logon/Access Notification - Informative message based on the authselect integrity check
+      result
+    ansible.builtin.assert:
+      that:
+      - result_authselect_check_cmd.rc == 0
+      fail_msg:
+      - authselect integrity check failed. Remediation aborted!
+      - This remediation could not be applied because an authselect profile was not selected or the selected profile is not
+        intact.
+      - It is not recommended to manually edit the PAM files when authselect tool is available.
+      - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
+      success_msg:
+      - authselect integrity check passed
+  - name: Ensure PAM Displays Last Logon/Access Notification - Get authselect Features Currently Enabled
+    ansible.builtin.shell:
+      cmd: authselect current | tail -n+3 | awk '{ print $2 }'
+    register: result_authselect_features
+    changed_when: false
+    when:
+    - result_authselect_check_cmd is success
+  - name: Ensure PAM Displays Last Logon/Access Notification - Ensure "with-silent-lastlog" Feature is Disabled Using authselect
+      Tool
+    ansible.builtin.command:
+      cmd: authselect disable-feature with-silent-lastlog
+    register: result_authselect_disable_feature_cmd
+    when:
+    - result_authselect_check_cmd is success
+    - result_authselect_features.stdout is search("with-silent-lastlog")
+  - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect changes are applied
+    ansible.builtin.command:
+      cmd: authselect apply-changes -b
+    when:
+    - result_authselect_disable_feature_cmd is not skipped
+    - result_authselect_disable_feature_cmd is success
+  when:
+  - DISA_STIG_RHEL_07_040530 | bool
+  - configure_strategy | bool
+  - display_login_attempts | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - low_severity | bool
+  - no_reboot_needed | bool
+  - '"pam" in ansible_facts.packages'
+  - result_authselect_present.stat.exists
+  - result_authselect_available_features.stdout is search("with-silent-lastlog")
+  tags:
+  - CCE-27275-7
+  - CJIS-5.5.2
+  - DISA-STIG-RHEL-07-040530
+  - NIST-800-53-AC-9
+  - NIST-800-53-AC-9(1)
+  - PCI-DSS-Req-10.2.4
+  - PCI-DSSv4-10.2.1.4
+  - configure_strategy
+  - display_login_attempts
+  - low_complexity
+  - low_disruption
+  - low_severity
+  - no_reboot_needed
+
+- name: Ensure PAM Displays Last Logon/Access Notification - Configure pam_lastlog.so in appropriate PAM files
   block:
   - name: Ensure PAM Displays Last Logon/Access Notification - Define the PAM file to be edited as a local fact
     ansible.builtin.set_fact:
@@ -1806,7 +1904,7 @@
       }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*session\s+required\s+pam_lastlog.so\s*.*
+      regexp: ^\s*session\s+{{ '[default=1]' | regex_escape() }}\s+pam_lastlog.so\s*.*
       state: absent
     check_mode: true
     changed_when: false
@@ -1827,7 +1925,7 @@
       ansible.builtin.replace:
         dest: '{{ pam_file_path }}'
         regexp: ^(\s*session\s+).*(\bpam_lastlog.so.*)
-        replace: \1required \2
+        replace: \1[default=1] \2
       register: result_pam_module_edit
       when:
       - result_pam_line_other_control_present.found == 1
@@ -1835,8 +1933,8 @@
         }}
       ansible.builtin.lineinfile:
         dest: '{{ pam_file_path }}'
-        insertafter: BOF
-        line: session    required    pam_lastlog.so
+        insertafter: ^\s*session\s+.*pam_succeed_if\.so.*
+        line: session    [default=1]    pam_lastlog.so
       register: result_pam_module_add
       when:
       - result_pam_line_other_control_present.found == 0 or result_pam_line_other_control_present.found > 1
@@ -1855,7 +1953,7 @@
       }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*session\s+required\s+pam_lastlog.so\s*.*\sshowfailed\b
+      regexp: ^\s*session\s+{{ '[default=1]' | regex_escape() }}\s+pam_lastlog.so\s*.*\sshowfailed\b
       state: absent
     check_mode: true
     changed_when: false
@@ -1865,200 +1963,19 @@
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
       backrefs: true
-      regexp: ^(\s*session\s+required\s+pam_lastlog.so.*)
+      regexp: ^(\s*session\s+{{ '[default=1]' | regex_escape() }}\s+pam_lastlog.so.*)
       line: \1 showfailed
       state: present
     register: result_pam_showfailed_add
     when:
     - result_pam_module_showfailed_option_present.found == 0
-  - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect changes are applied
-    ansible.builtin.command:
-      cmd: authselect apply-changes -b
-    when:
-    - result_authselect_present.stat.exists
-    - "(result_pam_showfailed_add is defined and result_pam_showfailed_add.changed)\n or (result_pam_showfailed_edit is defined\
-      \ and result_pam_showfailed_edit.changed)"
-  when:
-  - DISA_STIG_RHEL_07_040530 | bool
-  - configure_strategy | bool
-  - display_login_attempts | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - low_severity | bool
-  - no_reboot_needed | bool
-  - '"pam" in ansible_facts.packages'
-  - result_pam_file_present.stat.exists
-  tags:
-  - CCE-27275-7
-  - CJIS-5.5.2
-  - DISA-STIG-RHEL-07-040530
-  - NIST-800-53-AC-9
-  - NIST-800-53-AC-9(1)
-  - PCI-DSS-Req-10.2.4
-  - PCI-DSSv4-10.2.1.4
-  - configure_strategy
-  - display_login_attempts
-  - low_complexity
-  - low_disruption
-  - low_severity
-  - no_reboot_needed
-
-- name: Ensure PAM Displays Last Logon/Access Notification - Check if /etc/pam.d/postlogin file is present
-  ansible.builtin.stat:
-    path: /etc/pam.d/postlogin
-  register: result_pam_file_present
-  when:
-  - DISA_STIG_RHEL_07_040530 | bool
-  - configure_strategy | bool
-  - display_login_attempts | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - low_severity | bool
-  - no_reboot_needed | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-27275-7
-  - CJIS-5.5.2
-  - DISA-STIG-RHEL-07-040530
-  - NIST-800-53-AC-9
-  - NIST-800-53-AC-9(1)
-  - PCI-DSS-Req-10.2.4
-  - PCI-DSSv4-10.2.1.4
-  - configure_strategy
-  - display_login_attempts
-  - low_complexity
-  - low_disruption
-  - low_severity
-  - no_reboot_needed
-
-- name: Ensure PAM Displays Last Logon/Access Notification - Check the proper remediation for the system
-  block:
-  - name: Ensure PAM Displays Last Logon/Access Notification - Define the PAM file to be edited as a local fact
-    ansible.builtin.set_fact:
-      pam_file_path: /etc/pam.d/postlogin
-  - name: Ensure PAM Displays Last Logon/Access Notification - Check if system relies on authselect tool
-    ansible.builtin.stat:
-      path: /usr/bin/authselect
-    register: result_authselect_present
-  - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect custom profile is used if authselect is present
-    block:
-    - name: Ensure PAM Displays Last Logon/Access Notification - Check integrity of authselect current profile
-      ansible.builtin.command:
-        cmd: authselect check
-      register: result_authselect_check_cmd
-      changed_when: false
-      failed_when: false
-    - name: Ensure PAM Displays Last Logon/Access Notification - Informative message based on the authselect integrity check
-        result
-      ansible.builtin.assert:
-        that:
-        - result_authselect_check_cmd.rc == 0
-        fail_msg:
-        - authselect integrity check failed. Remediation aborted!
-        - This remediation could not be applied because an authselect profile was not selected or the selected profile is
-          not intact.
-        - It is not recommended to manually edit the PAM files when authselect tool is available.
-        - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
-        success_msg:
-        - authselect integrity check passed
-    - name: Ensure PAM Displays Last Logon/Access Notification - Get authselect current profile
-      ansible.builtin.shell:
-        cmd: authselect current -r | awk '{ print $1 }'
-      register: result_authselect_profile
-      changed_when: false
-      when:
-      - result_authselect_check_cmd is success
-    - name: Ensure PAM Displays Last Logon/Access Notification - Define the current authselect profile as a local fact
-      ansible.builtin.set_fact:
-        authselect_current_profile: '{{ result_authselect_profile.stdout }}'
-        authselect_custom_profile: '{{ result_authselect_profile.stdout }}'
-      when:
-      - result_authselect_profile is not skipped
-      - result_authselect_profile.stdout is match("custom/")
-    - name: Ensure PAM Displays Last Logon/Access Notification - Define the new authselect custom profile as a local fact
-      ansible.builtin.set_fact:
-        authselect_current_profile: '{{ result_authselect_profile.stdout }}'
-        authselect_custom_profile: custom/hardening
-      when:
-      - result_authselect_profile is not skipped
-      - result_authselect_profile.stdout is not match("custom/")
-    - name: Ensure PAM Displays Last Logon/Access Notification - Get authselect current features to also enable them in the
-        custom profile
-      ansible.builtin.shell:
-        cmd: authselect current | tail -n+3 | awk '{ print $2 }'
-      register: result_authselect_features
-      changed_when: false
-      when:
-      - result_authselect_profile is not skipped
-      - authselect_current_profile is not match("custom/")
-    - name: Ensure PAM Displays Last Logon/Access Notification - Check if any custom profile with the same name was already
-        created
-      ansible.builtin.stat:
-        path: /etc/authselect/{{ authselect_custom_profile }}
-      register: result_authselect_custom_profile_present
-      changed_when: false
-      when:
-      - authselect_current_profile is not match("custom/")
-    - name: Ensure PAM Displays Last Logon/Access Notification - Create an authselect custom profile based on the current
-        profile
-      ansible.builtin.command:
-        cmd: authselect create-profile hardening -b {{ authselect_current_profile }}
-      when:
-      - result_authselect_check_cmd is success
-      - authselect_current_profile is not match("custom/")
-      - not result_authselect_custom_profile_present.stat.exists
-    - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect changes are applied
-      ansible.builtin.command:
-        cmd: authselect apply-changes -b --backup=before-hardening-custom-profile
-      when:
-      - result_authselect_check_cmd is success
-      - result_authselect_profile is not skipped
-      - authselect_current_profile is not match("custom/")
-      - authselect_custom_profile is not match(authselect_current_profile)
-    - name: Ensure PAM Displays Last Logon/Access Notification - Ensure the authselect custom profile is selected
-      ansible.builtin.command:
-        cmd: authselect select {{ authselect_custom_profile }}
-      register: result_pam_authselect_select_profile
-      when:
-      - result_authselect_check_cmd is success
-      - result_authselect_profile is not skipped
-      - authselect_current_profile is not match("custom/")
-      - authselect_custom_profile is not match(authselect_current_profile)
-    - name: Ensure PAM Displays Last Logon/Access Notification - Restore the authselect features in the custom profile
-      ansible.builtin.command:
-        cmd: authselect enable-feature {{ item }}
-      loop: '{{ result_authselect_features.stdout_lines }}'
-      register: result_pam_authselect_restore_features
-      when:
-      - result_authselect_profile is not skipped
-      - result_authselect_features is not skipped
-      - result_pam_authselect_select_profile is not skipped
-    - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect changes are applied
-      ansible.builtin.command:
-        cmd: authselect apply-changes -b --backup=after-hardening-custom-profile
-      when:
-      - result_authselect_check_cmd is success
-      - result_authselect_profile is not skipped
-      - result_pam_authselect_restore_features is not skipped
-    - name: Ensure PAM Displays Last Logon/Access Notification - Change the PAM file to be edited according to the custom
-        authselect profile
-      ansible.builtin.set_fact:
-        pam_file_path: /etc/authselect/{{ authselect_custom_profile }}/{{ pam_file_path | basename }}
-    when:
-    - result_authselect_present.stat.exists
   - name: Ensure PAM Displays Last Logon/Access Notification - Ensure the "silent" option from "pam_lastlog.so" is not present
       in {{ pam_file_path }}
     ansible.builtin.replace:
       dest: '{{ pam_file_path }}'
-      regexp: (.*session.*pam_lastlog.so.*)\bsilent\b=?[0-9a-zA-Z]*(.*)
+      regexp: (.*session.*{{ '[default=1]' | regex_escape() }}.*pam_lastlog.so.*)\bsilent\b=?[0-9a-zA-Z]*(.*)
       replace: \1\2
     register: result_pam_option_removal
-  - name: Ensure PAM Displays Last Logon/Access Notification - Ensure authselect changes are applied
-    ansible.builtin.command:
-      cmd: authselect apply-changes -b
-    when:
-    - result_authselect_present.stat.exists
-    - result_pam_option_removal is changed
   when:
   - DISA_STIG_RHEL_07_040530 | bool
   - configure_strategy | bool
@@ -2068,7 +1985,6 @@
   - low_severity | bool
   - no_reboot_needed | bool
   - '"pam" in ansible_facts.packages'
-  - result_pam_file_present.stat.exists
   tags:
   - CCE-27275-7
   - CJIS-5.5.2
@@ -2343,7 +2259,7 @@
   - name: Limit Password Reuse - Check if expected PAM module line is present in {{ pam_file_path }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*password\s+requisite\s+pam_pwhistory.so\s*.*
+      regexp: ^\s*password\s+{{ 'requisite' | regex_escape() }}\s+pam_pwhistory.so\s*.*
       state: absent
     check_mode: true
     changed_when: false
@@ -2716,7 +2632,7 @@
   - name: Limit Password Reuse - Check if expected PAM module line is present in {{ pam_file_path }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*password\s+requisite\s+pam_pwhistory.so\s*.*
+      regexp: ^\s*password\s+{{ 'requisite' | regex_escape() }}\s+pam_pwhistory.so\s*.*
       state: absent
     check_mode: true
     changed_when: false
@@ -2760,7 +2676,7 @@
   - name: Limit Password Reuse - Check if the required PAM module option is present in {{ pam_file_path }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*password\s+requisite\s+pam_pwhistory.so\s*.*\sremember\b
+      regexp: ^\s*password\s+{{ 'requisite' | regex_escape() }}\s+pam_pwhistory.so\s*.*\sremember\b
       state: absent
     check_mode: true
     changed_when: false
@@ -2769,7 +2685,7 @@
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
       backrefs: true
-      regexp: ^(\s*password\s+requisite\s+pam_pwhistory.so.*)
+      regexp: ^(\s*password\s+{{ 'requisite' | regex_escape() }}\s+pam_pwhistory.so.*)
       line: \1 remember={{ var_password_pam_unix_remember }}
       state: present
     register: result_pam_remember_add
@@ -2780,7 +2696,7 @@
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
       backrefs: true
-      regexp: ^(\s*password\s+requisite\s+pam_pwhistory.so\s+.*)(remember)=[0-9a-zA-Z]+\s*(.*)
+      regexp: ^(\s*password\s+{{ 'requisite' | regex_escape() }}\s+pam_pwhistory.so\s+.*)(remember)=[0-9a-zA-Z]+\s*(.*)
       line: \1\2={{ var_password_pam_unix_remember }} \3
     register: result_pam_remember_edit
     when:
@@ -4620,7 +4536,7 @@
   - name: Set PAM's Password Hashing Algorithm - Check if expected PAM module line is present in {{ pam_file_path }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*password\s+sufficient\s+pam_unix.so\s*.*
+      regexp: ^\s*password\s+{{ 'sufficient' | regex_escape() }}\s+pam_unix.so\s*.*
       state: absent
     check_mode: true
     changed_when: false
@@ -4666,7 +4582,7 @@
   - name: Set PAM's Password Hashing Algorithm - Check if the required PAM module option is present in {{ pam_file_path }}
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
-      regexp: ^\s*password\s+sufficient\s+pam_unix.so\s*.*\ssha512\b
+      regexp: ^\s*password\s+{{ 'sufficient' | regex_escape() }}\s+pam_unix.so\s*.*\ssha512\b
       state: absent
     check_mode: true
     changed_when: false
@@ -4676,7 +4592,7 @@
     ansible.builtin.lineinfile:
       path: '{{ pam_file_path }}'
       backrefs: true
-      regexp: ^(\s*password\s+sufficient\s+pam_unix.so.*)
+      regexp: ^(\s*password\s+{{ 'sufficient' | regex_escape() }}\s+pam_unix.so.*)
       line: \1 sha512
       state: present
     register: result_pam_sha512_add
@@ -5085,7 +5001,7 @@
   - restrict_strategy | bool
 
 - name: Check audit argument exists
-  command: grep 'GRUB_CMDLINE_LINUX.*audit=' /etc/default/grub
+  command: grep '^\s*GRUB_CMDLINE_LINUX=.*audit=' /etc/default/grub
   failed_when: false
   register: argcheck
   when:
@@ -5097,6 +5013,72 @@
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - '"grub2-common" in ansible_facts.packages'
+  tags:
+  - CCE-27212-0
+  - CJIS-5.4.1.1
+  - NIST-800-171-3.3.1
+  - NIST-800-53-AC-17(1)
+  - NIST-800-53-AU-10
+  - NIST-800-53-AU-14(1)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IR-5(1)
+  - PCI-DSS-Req-10.3
+  - PCI-DSSv4-10.7
+  - grub2_audit_argument
+  - low_disruption
+  - low_severity
+  - medium_complexity
+  - reboot_required
+  - restrict_strategy
+
+- name: Check audit argument exists
+  command: grep '^\s*GRUB_CMDLINE_LINUX=' /etc/default/grub
+  failed_when: false
+  register: linecheck
+  when:
+  - grub2_audit_argument | bool
+  - low_disruption | bool
+  - low_severity | bool
+  - medium_complexity | bool
+  - reboot_required | bool
+  - restrict_strategy | bool
+  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - '"grub2-common" in ansible_facts.packages'
+  tags:
+  - CCE-27212-0
+  - CJIS-5.4.1.1
+  - NIST-800-171-3.3.1
+  - NIST-800-53-AC-17(1)
+  - NIST-800-53-AU-10
+  - NIST-800-53-AU-14(1)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IR-5(1)
+  - PCI-DSS-Req-10.3
+  - PCI-DSSv4-10.7
+  - grub2_audit_argument
+  - low_disruption
+  - low_severity
+  - medium_complexity
+  - reboot_required
+  - restrict_strategy
+
+- name: Add watch rule for  in /etc/audit/audit.rules
+  ansible.builtin.lineinfile:
+    line: GRUB_CMDLINE_LINUX="audit=1 "
+    state: present
+    dest: /etc/default/grub
+    create: true
+    mode: '0644'
+  when:
+  - grub2_audit_argument | bool
+  - low_disruption | bool
+  - low_severity | bool
+  - medium_complexity | bool
+  - reboot_required | bool
+  - restrict_strategy | bool
+  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - '"grub2-common" in ansible_facts.packages'
+  - argcheck.rc != 0 and linecheck.rc != 0
   tags:
   - CCE-27212-0
   - CJIS-5.4.1.1
@@ -5129,7 +5111,7 @@
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - '"grub2-common" in ansible_facts.packages'
-  - argcheck.rc == 0
+  - argcheck.rc == 0 and linecheck.rc == 0
   tags:
   - CCE-27212-0
   - CJIS-5.4.1.1
@@ -5151,7 +5133,7 @@
 - name: Add audit argument
   replace:
     path: /etc/default/grub
-    regexp: (GRUB_CMDLINE_LINUX=.*)"
+    regexp: (^\s*GRUB_CMDLINE_LINUX=.*)"
     replace: \1 audit=1"
   when:
   - grub2_audit_argument | bool
@@ -5162,7 +5144,7 @@
   - restrict_strategy | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - '"grub2-common" in ansible_facts.packages'
-  - argcheck.rc != 0
+  - argcheck.rc != 0 and linecheck.rc == 0
   tags:
   - CCE-27212-0
   - CJIS-5.4.1.1
@@ -7809,6 +7791,82 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
 
+- name: Check if watch rule for /etc/sudoers already exists in /etc/audit/audit.rules
+  find:
+    paths: /etc/audit/
+    contains: ^\s*-w\s+/etc/sudoers\s+-p\s+wa(\s|$)+
+    patterns: audit.rules
+  register: find_existing_watch_audit_rules
+  when:
+  - DISA_STIG_RHEL_07_030700 | bool
+  - audit_rules_sysadmin_actions | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"audit" in ansible_facts.packages'
+  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  tags:
+  - CCE-27461-3
+  - CJIS-5.4.1.1
+  - DISA-STIG-RHEL-07-030700
+  - NIST-800-171-3.1.7
+  - NIST-800-53-AC-2(7)(b)
+  - NIST-800-53-AC-6(9)
+  - NIST-800-53-AU-12(c)
+  - NIST-800-53-AU-2(d)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-10.2.2
+  - PCI-DSS-Req-10.2.5.b
+  - PCI-DSSv4-10.2.1.5
+  - PCI-DSSv4-10.2.2
+  - audit_rules_sysadmin_actions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add watch rule for /etc/sudoers in /etc/audit/audit.rules
+  lineinfile:
+    line: -w /etc/sudoers -p wa -k actions
+    state: present
+    dest: /etc/audit/audit.rules
+    create: true
+    mode: '0640'
+  when:
+  - DISA_STIG_RHEL_07_030700 | bool
+  - audit_rules_sysadmin_actions | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"audit" in ansible_facts.packages'
+  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - find_existing_watch_audit_rules.matched is defined and find_existing_watch_audit_rules.matched == 0
+  tags:
+  - CCE-27461-3
+  - CJIS-5.4.1.1
+  - DISA-STIG-RHEL-07-030700
+  - NIST-800-171-3.1.7
+  - NIST-800-53-AC-2(7)(b)
+  - NIST-800-53-AC-6(9)
+  - NIST-800-53-AU-12(c)
+  - NIST-800-53-AU-2(d)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-10.2.2
+  - PCI-DSS-Req-10.2.5.b
+  - PCI-DSSv4-10.2.1.5
+  - PCI-DSSv4-10.2.2
+  - audit_rules_sysadmin_actions
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
 - name: Check if watch rule for /etc/sudoers already exists in /etc/audit/rules.d/
   find:
     paths: /etc/audit/rules.d
@@ -7996,10 +8054,10 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check if watch rule for /etc/sudoers already exists in /etc/audit/audit.rules
+- name: Check if watch rule for /etc/sudoers.d/ already exists in /etc/audit/audit.rules
   find:
     paths: /etc/audit/
-    contains: ^\s*-w\s+/etc/sudoers\s+-p\s+wa(\s|$)+
+    contains: ^\s*-w\s+/etc/sudoers.d/\s+-p\s+wa(\s|$)+
     patterns: audit.rules
   register: find_existing_watch_audit_rules
   when:
@@ -8033,9 +8091,9 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Add watch rule for /etc/sudoers in /etc/audit/audit.rules
+- name: Add watch rule for /etc/sudoers.d/ in /etc/audit/audit.rules
   lineinfile:
-    line: -w /etc/sudoers -p wa -k actions
+    line: -w /etc/sudoers.d/ -p wa -k actions
     state: present
     dest: /etc/audit/audit.rules
     create: true
@@ -8238,82 +8296,6 @@
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
   - find_existing_watch_rules_d.matched is defined and find_existing_watch_rules_d.matched == 0
-  tags:
-  - CCE-27461-3
-  - CJIS-5.4.1.1
-  - DISA-STIG-RHEL-07-030700
-  - NIST-800-171-3.1.7
-  - NIST-800-53-AC-2(7)(b)
-  - NIST-800-53-AC-6(9)
-  - NIST-800-53-AU-12(c)
-  - NIST-800-53-AU-2(d)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-10.2.2
-  - PCI-DSS-Req-10.2.5.b
-  - PCI-DSSv4-10.2.1.5
-  - PCI-DSSv4-10.2.2
-  - audit_rules_sysadmin_actions
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Check if watch rule for /etc/sudoers.d/ already exists in /etc/audit/audit.rules
-  find:
-    paths: /etc/audit/
-    contains: ^\s*-w\s+/etc/sudoers.d/\s+-p\s+wa(\s|$)+
-    patterns: audit.rules
-  register: find_existing_watch_audit_rules
-  when:
-  - DISA_STIG_RHEL_07_030700 | bool
-  - audit_rules_sysadmin_actions | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"audit" in ansible_facts.packages'
-  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
-  tags:
-  - CCE-27461-3
-  - CJIS-5.4.1.1
-  - DISA-STIG-RHEL-07-030700
-  - NIST-800-171-3.1.7
-  - NIST-800-53-AC-2(7)(b)
-  - NIST-800-53-AC-6(9)
-  - NIST-800-53-AU-12(c)
-  - NIST-800-53-AU-2(d)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-10.2.2
-  - PCI-DSS-Req-10.2.5.b
-  - PCI-DSSv4-10.2.1.5
-  - PCI-DSSv4-10.2.2
-  - audit_rules_sysadmin_actions
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add watch rule for /etc/sudoers.d/ in /etc/audit/audit.rules
-  lineinfile:
-    line: -w /etc/sudoers.d/ -p wa -k actions
-    state: present
-    dest: /etc/audit/audit.rules
-    create: true
-    mode: '0640'
-  when:
-  - DISA_STIG_RHEL_07_030700 | bool
-  - audit_rules_sysadmin_actions | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"audit" in ansible_facts.packages'
-  - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
-  - find_existing_watch_audit_rules.matched is defined and find_existing_watch_audit_rules.matched == 0
   tags:
   - CCE-27461-3
   - CJIS-5.4.1.1
@@ -8560,6 +8542,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
     == "s390x" or ansible_architecture == "x86_64"
   tags:
@@ -8684,6 +8667,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   tags:
   - CCE-27339-1
   - CJIS-5.4.1.1
@@ -8806,6 +8790,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - audit_arch == "b64"
   tags:
   - CCE-27339-1
@@ -8865,6 +8850,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
     == "s390x" or ansible_architecture == "x86_64"
   tags:
@@ -8991,6 +8977,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   tags:
   - CCE-27364-9
   - CJIS-5.4.1.1
@@ -9115,6 +9102,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - audit_arch == "b64"
   tags:
   - CCE-27364-9
@@ -11036,6 +11024,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - ansible_architecture == "aarch64" or ansible_architecture == "ppc64" or ansible_architecture == "ppc64le" or ansible_architecture
     == "s390x" or ansible_architecture == "x86_64"
   tags:
@@ -11162,6 +11151,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   tags:
   - CCE-27083-5
   - CJIS-5.4.1.1
@@ -11286,6 +11276,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - not ( ansible_architecture == "aarch64" )
   - audit_arch == "b64"
   tags:
   - CCE-27083-5
@@ -14097,6 +14088,7 @@
   - restrict_strategy | bool
   - '"audit" in ansible_facts.packages'
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - ( not ( ansible_architecture == "aarch64" ) and not ( ansible_architecture == "s390x" ) )
   tags:
   - CCE-27299-7
   - CJIS-5.4.1.1
@@ -15798,6 +15790,28 @@
   - no_reboot_needed
   - rsyslog_files_permissions
 
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
+  - CCE-80195-1
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-10.7
+  - PCI-DSSv4-10.5.1
+  - configure_strategy
+  - ensure_logrotate_activated
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  when:
+  - configure_strategy | bool
+  - ensure_logrotate_activated | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+
 - name: Configure daily log rotation in /etc/logrotate.conf
   lineinfile:
     create: true
@@ -15812,6 +15826,7 @@
   - medium_severity | bool
   - no_reboot_needed | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - '"logrotate" in ansible_facts.packages'
   tags:
   - CCE-80195-1
   - NIST-800-53-CM-6(a)
@@ -15838,6 +15853,7 @@
   - medium_severity | bool
   - no_reboot_needed | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - '"logrotate" in ansible_facts.packages'
   tags:
   - CCE-80195-1
   - NIST-800-53-CM-6(a)
@@ -15871,6 +15887,7 @@
   - medium_severity | bool
   - no_reboot_needed | bool
   - ansible_virtualization_type not in ["docker", "lxc", "openvz", "podman", "container"]
+  - '"logrotate" in ansible_facts.packages'
   tags:
   - CCE-80195-1
   - NIST-800-53-CM-6(a)
@@ -16599,7 +16616,7 @@
   - name: Check for duplicate values
     lineinfile:
       path: /etc/ssh/sshd_config
-      create: false
+      create: true
       regexp: (?i)^\s*ClientAliveCountMax\s+
       state: absent
     check_mode: true
@@ -16608,7 +16625,7 @@
   - name: Deduplicate values from /etc/ssh/sshd_config
     lineinfile:
       path: /etc/ssh/sshd_config
-      create: false
+      create: true
       regexp: (?i)^\s*ClientAliveCountMax\s+
       state: absent
     when: dupes.found is defined and dupes.found > 1
@@ -16619,7 +16636,7 @@
       regexp: (?i)^\s*ClientAliveCountMax\s+
       line: ClientAliveCountMax 0
       state: present
-      insertbefore: ^[#\s]*Match
+      insertbefore: BOF
       validate: /usr/sbin/sshd -t -f %s
   when:
   - DISA_STIG_RHEL_07_040340 | bool
@@ -16654,7 +16671,7 @@
   - name: Check for duplicate values
     lineinfile:
       path: /etc/ssh/sshd_config
-      create: false
+      create: true
       regexp: (?i)^\s*ClientAliveInterval\s+
       state: absent
     check_mode: true
@@ -16663,7 +16680,7 @@
   - name: Deduplicate values from /etc/ssh/sshd_config
     lineinfile:
       path: /etc/ssh/sshd_config
-      create: false
+      create: true
       regexp: (?i)^\s*ClientAliveInterval\s+
       state: absent
     when: dupes.found is defined and dupes.found > 1
@@ -16674,7 +16691,7 @@
       regexp: (?i)^\s*ClientAliveInterval\s+
       line: ClientAliveInterval {{ sshd_idle_timeout_value }}
       state: present
-      insertbefore: ^[#\s]*Match
+      insertbefore: BOF
       validate: /usr/sbin/sshd -t -f %s
   when:
   - DISA_STIG_RHEL_07_040320 | bool
