@@ -16,6 +16,7 @@ var_password_hashing_algorithm: SHA512
 var_account_disable_post_pw_expiration: '90'
 var_accounts_maximum_age_login_defs: '90'
 var_accounts_password_warn_age_login_defs: '7'
+var_pam_wheel_group_for_su: sugroup
 var_accounts_tmout: '600'
 var_accounts_passwords_pam_faillock_dir: /var/log/faillock
 var_auditd_admin_space_left_action: single
@@ -178,6 +179,7 @@ audit_rules_usergroup_modification_gshadow: true
 audit_rules_usergroup_modification_opasswd: true
 audit_rules_usergroup_modification_passwd: true
 audit_rules_usergroup_modification_shadow: true
+audit_sudo_log_events: true
 auditd_audispd_syslog_plugin_activated: true
 auditd_data_retention_admin_space_left_action: true
 auditd_data_retention_space_left: true
@@ -206,6 +208,7 @@ display_login_attempts: true
 enable_strategy: true
 ensure_gpgcheck_globally_activated: true
 ensure_gpgcheck_never_disabled: true
+ensure_pam_wheel_group_empty: true
 ensure_redhat_gpgkey_installed: true
 file_at_deny_not_exist: true
 file_cron_deny_not_exist: true
@@ -292,6 +295,7 @@ package_audit_installed: true
 package_chrony_installed: true
 package_cryptsetup_luks_installed: true
 package_dhcp_removed: true
+package_ftp_removed: true
 package_libselinux_installed: true
 package_logrotate_installed: true
 package_net_snmp_removed: true
@@ -368,4 +372,5 @@ sysctl_net_ipv4_tcp_syncookies: true
 sysctl_net_ipv6_conf_default_accept_source_route: true
 unknown_severity: true
 unknown_strategy: true
+use_pam_wheel_group_for_su: true
 wireless_disable_interfaces: true
